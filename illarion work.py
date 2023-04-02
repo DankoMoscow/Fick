@@ -585,7 +585,7 @@ def Fick(x):
             c_ips_gel_border.append(c_ips_free[t_step_index])
 
         # adding for n+1 time step
-
+        print('Длина',len(mass_transfer_coef))
         c_ips_gel_border.append(
 
             (

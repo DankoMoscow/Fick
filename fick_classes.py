@@ -49,6 +49,8 @@ B7 = 6.519333e-6
 B8 = -3.567559e-1
 B9 = 3.180473e-2
 
+
+density_sio2 = 2034 #кг/м3
 density_ips = 785.1  # кг/м3
 density_co2 = 468  # кг/м3
 
@@ -237,7 +239,7 @@ class scd_apparatus():
                 c_temp[0] = c_temp[1]
                 return c_temp
 
-    def fick_changed(self, T, P, flowrate, n_t, dr, dt, volume):
+    def fick_changed(self, T, P, flowrate, n_t, dr, dt):
         density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = self.density_co2_and_viscos(T, P)
 
         if self.key == 'one_dim':
@@ -253,10 +255,10 @@ class scd_apparatus():
         kinenamitc_viscosity_co2 = dynamic_viscosity_co2 / density_co2
         kinenamitc_viscosity_ips = dynamic_viscosity_ips / density_ips
 
-        S_apparatus = math.pi / 4 * 0,32 ** 2  # площадь поперечного сечения аппарата, м2
+        S_apparatus = math.pi / 4 * 0.32 ** 2  # площадь поперечного сечения аппарата, м2
 
         y_start = optimize.golden(self.golden_method, maxiter=10000)  # массовая доля, кг/кгсм
-
+        print('Начальная массовая доля', y_start)
         V_ips = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)  # объемная доля, м3/м3
         density_mixture = density_ips * V_ips + density_co2 * (1 - V_ips)  # плотность смеси, кг/м3
         m_mixture = density_mixture * self.V_total  # Масса смеси, кг
@@ -279,15 +281,27 @@ class scd_apparatus():
         """  
         костыль, но как есть. Используется для цилиндра
         """
+        mass_transfer_coef =[]
         y_fick = []  # создаю список массовых долей
-        y_fick.append([y_start for i in range(0, num_steps + 1)])  # наполняю егго начальным условиями
+        y_fick.append([y_start for i in range(0, num_steps + 1)])  # наполняю его начальным условиями
         y_fick_center = []
         y_fick_center.append(y_start)
         y_fick_border = []
         y_fick_border.append(y_start)
-        m_alc_out, m_ips_in_gels, m_ips_in_gel, ips_gel_load, c_ips_free, density_mixture_free = []
-        m_ips_free, m_ips_apparatus, c_ips_apparatus_percent, c_ips_gels_percent = []
-        M_ips_free, D_coef_mol_free, kinenamitc_viscosity_mixture_free, c_ips_gel_border = []
+        m_alc_out = []
+        m_ips_in_gels = []
+        m_ips_in_gel = []
+        ips_gel_load =[]
+        c_ips_free = []
+        density_mixture_free = []
+        m_ips_free = []
+        m_ips_apparatus = []
+        c_ips_apparatus_percent = []
+        c_ips_gels_percent = []
+        M_ips_free = []
+        D_coef_mol_free = []
+        kinenamitc_viscosity_mixture_free = []
+        c_ips_gel_border = []
         M_ips_in_gel = []  # Мольная доля
         M_co2_ratio_in_gel_center = []  # Мольная доля
         D_coef_mol_in_gel = []
@@ -301,7 +315,7 @@ class scd_apparatus():
         """
         тут создаю списки, далее буду их наполнять
         """
-        for time_step in range(0, n_t):
+        for time_step in range(0, round(n_t)):
             if time_step > 0:
                 c_coef_new = [None] * (num_steps + 1)
                 a_coef_new = [None] * (num_steps + 1)
@@ -391,7 +405,7 @@ class scd_apparatus():
             Sh_lam.append(0.664 * Re[time_step] ** 0.5 * Sc[time_step] ** 1.5)
 
             Sh.append(0.3 + (Sh_lam[time_step] ** 2 + Sh_turbulent[time_step] ** 2) ** 0.5)
-            mass_transfer_coef = []
+
             mass_transfer_coef.append(
                 D_coef_mol_free[time_step] * Sh[time_step] * 0.805 / (math.pi * characteristic_size))
 
@@ -401,11 +415,11 @@ class scd_apparatus():
             c_ips_gel_border.append(
                 (porosity * D_coef_mol_in_gel[time_step][num_steps] * y_fick[time_step][num_steps - 1] / (
                         tau_izv * (h_arr[num_steps] - h_arr[num_steps - 1])) +
-                        mass_transfer_coef[time_step] * c_ips_free[time_step]
-                ) /
+                 mass_transfer_coef[time_step]
+                 * c_ips_free[time_step]) /
                 (porosity * D_coef_mol_in_gel[time_step][num_steps] / (
-                        tau_izv * (h_arr[num_steps] - h_arr[num_steps - 1])) +
-                 mass_transfer_coef[time_step]))
+                        tau_izv * (h_arr[num_steps] - h_arr[num_steps - 1])) + mass_transfer_coef[time_step]))
+
             Mn = np.sum(
                 [y_fick[time_step][i] * density_co2 * V_cell[i] * target_material_porosity for i in range(0, num_steps + 1)])
             w = []
@@ -417,6 +431,8 @@ class scd_apparatus():
 
         y_fick_border.pop(0)
         y_fick_center.pop(0)
+
+        return y_fick
     def fick_mass(self, c, length, width):
         m = 0.
         for i in range(1, len(c)):
@@ -479,6 +495,9 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
 
     object1 = scd_apparatus(T, P, volume, flowrate, width, length, height, diff_coef, value, key_sch, number_samples)
     object1.__str__()
+
+    matrix = object1.fick_changed( T, P, flowrate, n_t, dr, dt)
+    print('матрица', matrix[0])
 
     print('n_t:', n_t, 'proc_time:', proc_time, 'variable of item',value)
     time = np.linspace(0, proc_time, n_t)
