@@ -265,7 +265,7 @@ class scd_apparatus():
                 V_cell.append(math.pi * 4 / 3 * (h_arr[i] ** 3 - (h_arr[i - 1] ** 3)) * target_material_porosity)
         V_cell_sum = np.sum(V_cell)
         v = 1
-        """ 
+        """  
         костыль, но как есть. Используется для цилиндра
         """
         y_fick = []  # создаю список массовых долей
