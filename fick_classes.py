@@ -49,11 +49,9 @@ B7 = 6.519333e-6
 B8 = -3.567559e-1
 B9 = 3.180473e-2
 
-
-y_ips = np.linspace(1, 0, 102)
-
 density_ips = 785.1  # кг/м3
 density_co2 = 468  # кг/м3
+
 
 file_path = os.path.dirname(os.path.abspath(__file__))
 img_path = os.path.join(file_path, 'Images')
@@ -242,10 +240,23 @@ class scd_apparatus():
     def fick_changed(self, T, P, flowrate, n_t, dr, dt, volume):
         density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = self.density_co2_and_viscos(T, P)
 
+        if self.key == 'one_dim':
+            characteristic_size = self.height/2
+            S_gel = self.length * self.height
+        elif self.key == 'cyl':
+            characteristic_size = R
+            S_gel = math.pi * R**2
+        elif self.key == 'sphere':
+            characteristic_size = R
+            S_gel  = math.pi * R**2
+        S_gels = S_gel * self.number_samples
         kinenamitc_viscosity_co2 = dynamic_viscosity_co2 / density_co2
         kinenamitc_viscosity_ips = dynamic_viscosity_ips / density_ips
 
+        S_apparatus = math.pi / 4 * 0,32 ** 2  # площадь поперечного сечения аппарата, м2
+
         y_start = optimize.golden(self.golden_method, maxiter=10000)  # массовая доля, кг/кгсм
+
         V_ips = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)  # объемная доля, м3/м3
         density_mixture = density_ips * V_ips + density_co2 * (1 - V_ips)  # плотность смеси, кг/м3
         m_mixture = density_mixture * self.V_total  # Масса смеси, кг
@@ -280,6 +291,12 @@ class scd_apparatus():
         M_ips_in_gel = []  # Мольная доля
         M_co2_ratio_in_gel_center = []  # Мольная доля
         D_coef_mol_in_gel = []
+        Sc = []
+        Sh = []
+        Sh_lam = []
+        U = []
+        Re = []
+        Sh_turbulent = []
 
         """
         тут создаю списки, далее буду их наполнять
@@ -313,60 +330,93 @@ class scd_apparatus():
 
                 y_fick[time_step][0] = y_fick[time_step][1]
 
-        M_ips_in_gel.append([M_co2 / 1000 * y_fick[time_step][i] / (
-                (1 - y_fick[time_step][i]) * M_ips / 1000 + y_fick[time_step][i] * M_co2 / 1000) for i in
-                             range(0, num_steps + 1)])
+            M_ips_in_gel.append([M_co2 / 1000 * y_fick[time_step][i] / (
+                    (1 - y_fick[time_step][i]) * M_ips / 1000 + y_fick[time_step][i] * M_co2 / 1000) for i in
+                                 range(0, num_steps + 1)])
 
-        D_coef_mol_in_gel.append(
-            [D_coef_co2_ips ** M_ips_in_gel[time_step][i] * D_coef_ips_co2 ** (1 - M_ips_in_gel[time_step][i]) for
-             i in range(0, num_steps + 1)])
+            D_coef_mol_in_gel.append(
+                [D_coef_co2_ips ** M_ips_in_gel[time_step][i] * D_coef_ips_co2 ** (1 - M_ips_in_gel[time_step][i]) for
+                 i in range(0, num_steps + 1)])
 
-        matrix_ips = [y_fick[time_step][i] * V_cell[i] * density_co2 for i in range(0, num_steps + 1)]
+            matrix_ips = [y_fick[time_step][i] * V_cell[i] * density_co2 for i in range(0, num_steps + 1)]
 
-        M_co2_ratio_in_gel_center.append(1 - M_ips_in_gel[time_step][0])
+            M_co2_ratio_in_gel_center.append(1 - M_ips_in_gel[time_step][0])
 
-        m_ips_in_gel.append(np.sum(matrix_ips))
+            m_ips_in_gel.append(np.sum(matrix_ips))
 
-        m_alc_out.append(
-            (m_ips_in_gel[time_step - 1] - m_ips_in_gel[time_step]) * self.number_samples if time_step > 0 else 0)
+            m_alc_out.append(
+                (m_ips_in_gel[time_step - 1] - m_ips_in_gel[time_step]) * self.number_samples if time_step > 0 else 0)
 
-        m_ips_in_gels.append(m_ips_in_gels[time_step - 1] - m_alc_out[time_step] * 1000 if time_step > 0 else ( V_cell_sum * self.number_samples) * y_start * density_mixture * 1000)
+            m_ips_in_gels.append(m_ips_in_gels[time_step - 1] - m_alc_out[time_step] * 1000 if time_step > 0 else ( V_cell_sum * self.number_samples) * y_start * density_mixture * 1000)
 
-        ips_gel_load.append(m_ips_in_gel[time_step] / (
-                m_ips_in_gel[time_step] + target_material_porosity * self.V_gels / self.number_samples) * 100)
+            ips_gel_load.append(m_ips_in_gel[time_step] / (
+                    m_ips_in_gel[time_step] + target_material_porosity * self.V_gels / self.number_samples) * 100)
 
-        c_ips_free.append(
-            c_ips_free[time_step - 1] *
-            (1 - dt / (self.V_apparat_free / self.flowrate)) +
-            m_alc_out[time_step] / self.V_apparat_free / density_co2
-            if time_step > 0 else y_start)
+            c_ips_free.append(
+                c_ips_free[time_step - 1] *
+                (1 - dt / (self.V_apparat_free / self.flowrate)) +
+                m_alc_out[time_step] / self.V_apparat_free / density_co2
+                if time_step > 0 else y_start)
 
-        m_ips_free.append(c_ips_free[time_step] * self.V_apparat_free * 1000 * density_co2)
+            m_ips_free.append(c_ips_free[time_step] * self.V_apparat_free * 1000 * density_co2)
 
-        m_ips_apparatus.append(m_ips_free[time_step] + m_ips_in_gels[time_step])
+            m_ips_apparatus.append(m_ips_free[time_step] + m_ips_in_gels[time_step])
 
-        c_ips_apparatus_percent.append(m_ips_apparatus[time_step] / m_ips_apparatus[0] * 100)
-        m_aerogels = target_material_porosity * self.number_samples
-        c_ips_gels_percent.append(
-            m_ips_apparatus[time_step] / (m_ips_apparatus[time_step] + m_aerogels * 1000) * 100)
+            c_ips_apparatus_percent.append(m_ips_apparatus[time_step] / m_ips_apparatus[0] * 100)
 
-        M_ips_free.append(M_co2 / 1000 * c_ips_free[time_step] / (
-                (1 - c_ips_free[time_step]) * M_ips / 1000 + M_co2 / 1000 * c_ips_free[time_step]))
+            m_aerogels = target_material_porosity * self.number_samples
 
-        D_coef_mol_free.append(
-            D_coef_co2_ips ** M_ips_free[time_step] * D_coef_ips_co2 ** (1 - M_ips_free[time_step]))
+            c_ips_gels_percent.append(
+                m_ips_apparatus[time_step] / (m_ips_apparatus[time_step] + m_aerogels * 1000) * 100)
 
-        if time_step == 0:
-            c_ips_gel_border.append(c_ips_free[time_step])
+            M_ips_free.append(M_co2 / 1000 * c_ips_free[time_step] / (
+                    (1 - c_ips_free[time_step]) * M_ips / 1000 + M_co2 / 1000 * c_ips_free[time_step]))
 
-        c_ips_gel_border.append(
-            (porosity * D_coef_mol_in_gel[time_step][num_steps] * y_fick[t_step_index][num_steps - 1] / (
-                    tau_izv * (h_arr[num_steps] - h_arr[num_steps - 1])) +
-                    mass_transfer_coef[t_step_index] * c_ips_free[t_step_index]
-            ) /
-            (porosity * D_coef_mol_in_gel[time_step][h_n] / (
-                    tau_izv * (h_arr[h_n] - h_arr[h_n - 1])) +
-             mass_transfer_coef[t_step_index]))
+            D_coef_mol_free.append(
+                D_coef_co2_ips ** M_ips_free[time_step] * D_coef_ips_co2 ** (1 - M_ips_free[time_step]))
+
+            kinenamitc_viscosity_mixture_free.append(
+                kinenamitc_viscosity_co2 ** (1 - M_ips_free[time_step]) * kinenamitc_viscosity_ips ** M_ips_free[
+                    time_step])
+            Sc.append(kinenamitc_viscosity_mixture_free[time_step] / D_coef_mol_free[time_step])
+
+            U.append(
+                self.flowrate / (S_apparatus - S_gel))  # Средняя поверхностная скорость потока в центре аппарата
+
+            Re.append(math.pi * characteristic_size * U[time_step] / kinenamitc_viscosity_mixture_free[time_step])
+            Sh_turbulent.append(0.037 * (Re[time_step] ** 0.8) * Sc[time_step]
+                / (1 + 2.443 * (Re[time_step] ** (-0.1))
+                 *(Sc[time_step] ** (2 / 3) - 1)))
+
+            Sh_lam.append(0.664 * Re[time_step] ** 0.5 * Sc[time_step] ** 1.5)
+
+            Sh.append(0.3 + (Sh_lam[time_step] ** 2 + Sh_turbulent[time_step] ** 2) ** 0.5)
+            mass_transfer_coef = []
+            mass_transfer_coef.append(
+                D_coef_mol_free[time_step] * Sh[time_step] * 0.805 / (math.pi * characteristic_size))
+
+            if time_step == 0:
+                c_ips_gel_border.append(c_ips_free[time_step])
+
+            c_ips_gel_border.append(
+                (porosity * D_coef_mol_in_gel[time_step][num_steps] * y_fick[time_step][num_steps - 1] / (
+                        tau_izv * (h_arr[num_steps] - h_arr[num_steps - 1])) +
+                        mass_transfer_coef[time_step] * c_ips_free[time_step]
+                ) /
+                (porosity * D_coef_mol_in_gel[time_step][num_steps] / (
+                        tau_izv * (h_arr[num_steps] - h_arr[num_steps - 1])) +
+                 mass_transfer_coef[time_step]))
+            Mn = np.sum(
+                [y_fick[time_step][i] * density_co2 * V_cell[i] * target_material_porosity for i in range(0, num_steps + 1)])
+            w = []
+            w.append(Mn / (Mn + target_material_porosity * self.V_gels / self.number_samples) * 100)
+            y_fick_border.append(y_fick[time_step][-1])
+            y_fick_center.append(y_fick[time_step][0])
+            x_fick_finish = M_co2 / 1000 * y_fick[time_step][0] / (
+                        (1 - y_fick[time_step][0]) * M_ips / 1000 + y_fick[time_step][0] * M_co2 / 1000)
+
+        y_fick_border.pop(0)
+        y_fick_center.pop(0)
     def fick_mass(self, c, length, width):
         m = 0.
         for i in range(1, len(c)):

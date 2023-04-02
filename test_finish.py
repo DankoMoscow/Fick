@@ -36,8 +36,8 @@ float_height = pn.widgets.FloatSlider(name='Высота образца', start=
 float_volume = pn.widgets.FloatSlider(name='Объём аппарата', start=0.1, end=1, step=0.1, value=0.3,
                                       format=PrintfTickFormatter(format='%.2f кубических метров'))
 
-float_flowrate = pn.widgets.FloatSlider(name='Объёмный расход', start=0.0001, end=0.01, step=0.001, value=0.001,
-                                        format=PrintfTickFormatter(format='%.4f кубических метров в секунду'))
+float_flowrate = pn.widgets.FloatSlider(name='Объёмный расход', start=0.000001, end=0.001, step=0.00001, value=0.0001,
+                                        format=PrintfTickFormatter(format='%.6f кубических метров в секунду'))
 
 float_dt = pn.widgets.FloatSlider(name='Шаг по времени', start=10, end=200, step=10, value=50)
 
