@@ -257,10 +257,13 @@ class scd_apparatus():
         y_fick.append([y_start for i in range(0, num_steps + 2)])  # наполняю его начальным условиями
         V_ips.append( (density_co2 * y_start[i] / (density_ips * (1 - y_start[i]) + density_co2 * y_start[i]))  for i in range(0, num_steps +2))
         density_mixture.append((density_ips * V_ips[j] + density_co2 * (1 - V_ips[j])) for j in range(0, num_steps+2))
+        c_changed = []
+        c_changed.append((density_ips) for k in range(0, num_steps+2))
+
 
         M_ips_in_gel = []  # Мольная доля
         D_coef_mol_in_gel = []
-        n_t = 20
+        n_t = 100
         for time_step in range(0, round(n_t)):
             if time_step > 0:
                 c_coef_new = [None] * (num_steps + 2)
@@ -270,9 +273,11 @@ class scd_apparatus():
                 alfa_new = [1] * (num_steps + 2)
                 beta_new = [0] * (num_steps + 2)
 
-                y_fick.append([None] * (num_steps + 2))
-                density_mixture.append([None] * (num_steps + 2))
-                V_ips.append([None] * (num_steps + 2))
+                y_fick.append([0] * (num_steps + 2))
+                density_mixture.append([0] * (num_steps + 2))
+                V_ips.append([0] * (num_steps + 2))
+                c_changed.append([0]* (num_steps+2))
+
 
                 y_fick[time_step][-1] = c_bound
                 V_ips[time_step][-1] = 0
@@ -296,12 +301,18 @@ class scd_apparatus():
                 for i in range(num_steps, 0, -1):
 
                     y_fick[time_step][i] = alfa_new[i] * y_fick[time_step][i + 1] + beta_new[i]
+
                     V_ips[time_step][i] = density_co2 * y_fick[time_step][i] / (density_ips * (1 - y_fick[time_step][i]) + density_co2 * y_fick[time_step][i])
                     density_mixture[time_step][i] = density_ips * V_ips[time_step][i] + density_co2 * (1 - V_ips[time_step][i])
+
+
 
                 y_fick[time_step][0] = y_fick[time_step][1]
                 V_ips[time_step][0] = V_ips[time_step][1]
                 density_mixture[time_step][0] = density_mixture[time_step][1]
+                print('Первое значение y', y_fick[time_step][0], 'первое знанием D', density_mixture[time_step][0])
+                for i in range(0, num_steps+2):
+                    c_changed[time_step][i] = y_fick[time_step][i] * density_mixture[time_step][i]
 
             M_ips_in_gel.append([M_co2 / 1000 * y_fick[time_step][i] / ((1 - y_fick[time_step][i]) * M_ips / 1000 + y_fick[time_step][i] * M_co2 / 1000) for i in
                                  range(0, num_steps + 2)])
@@ -309,7 +320,7 @@ class scd_apparatus():
             D_coef_mol_in_gel.append([D_coef_co2_ips ** M_ips_in_gel[time_step][i] * D_coef_ips_co2 ** (1 - M_ips_in_gel[time_step][i]) for
                  i in range(0, num_steps + 2)])
 
-        print('density', density_mixture)
+        print('density', c_changed)
         return y_fick
     def fick_mass(self, c, length, width):
         m = 0.
@@ -375,7 +386,7 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     object1.__str__()
 
     matrix = object1.fick_changed( T, P, flowrate, n_t, dr, dt)
-    print('матрица', matrix[3])
+
 
     print('n_t:', n_t, 'proc_time:', proc_time, 'variable of item',value)
     time = np.linspace(0, proc_time, n_t)
