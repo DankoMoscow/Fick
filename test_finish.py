@@ -48,13 +48,12 @@ int_number_samples = pn.widgets.IntSlider(name='Количество образ�
                                           format=PrintfTickFormatter(format='%.1f штук'))
 
 
-
 group_of_key = pn.widgets.RadioButtonGroup(
     name='Выбор необходимого вида образца', options=['one_dim', 'cyl', 'sphere'], button_type='success',
     orientation='vertical')
 
 group_of_ways = pn.widgets.RadioButtonGroup(
-    name='Выбор разностной схемы', options=['implicit', 'explicit'], button_type='success', orientation='vertical')
+    name='Выбор разностной схемы', options=['implicit', 'explicit', 'implicit modified'], button_type='success', orientation='vertical')
 
 groups = pn.Row(group_of_key, group_of_ways)
 
@@ -68,22 +67,18 @@ static_time_process = pn.widgets.StaticText(name='Расчётное время 
 static_time_process_result = pn.widgets.StaticText(name='Итог сушки', value=' ')
 
 
-
 button = pn.widgets.Button(name='Нажмите для запуска расчёта', button_type='primary')
 button_exit = pn.widgets.Button(name='Нажмите для выхода', button_type='primary')
 
 
-
-
 pressure_select = pn.widgets.FloatSlider(name='Давление системы', start=80, end=200, step=5, value=120,
                                           format=PrintfTickFormatter(format='%.1f бар'))
-temperature_select = pn.widgets.FloatSlider(name='Температура системы', start=300, end=500, step=1, value=313,
+temperature_select = pn.widgets.FloatSlider(name='Температура системы', start=313, end=500, step=1, value=313,
                                           format=PrintfTickFormatter(format='%.1f кельвинов'))
 
 dop_column = pn.Column(pressure_select, temperature_select)
 
 #виджеты для отображения
-
 
 main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main,
                           static_text, static_cond, static_time,

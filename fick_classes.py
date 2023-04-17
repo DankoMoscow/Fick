@@ -105,11 +105,12 @@ class scd_apparatus():
     это функция для нахождения истинной плотности улекислого газа в сверхкритическом состоянии и коэффициентов диффузии обоих веществ
     """
     def density_co2_and_viscos(self, T, P):
-        density_co2_coef = 14258.88822 - 84.97903074 * self.T + 11.30377033 * self.P + 0.017974145 * self.T * self.P + 0.135119422 * self.T ** 2 - 0.071358164 * self.P ** 2 - 4.73474E-05 * self.T ** 3 + 0.000110024 * self.P ** 3 #коэфф диффузии co2 in ips
+        density_co2_coef = 14258.88822 - 84.97903074 * self.T + 11.30377033 * self.P + 0.017974145 * self.T * self.P + 0.135119422 * self.T ** 2 - 0.071358164 * self.P ** 2 - 4.73474E-05 * self.T ** 3 + 0.000110024 * self.P ** 3 #плотность сверхкритического углекислого газа
         koef = Tcr_co2 * Vcr_co2 / (1000 * M_co2)
         A_coef = 14.882 + 5.908 * koef + 2.0821 * koef ** 2
         Vmol_co2 = M_co2 / density_co2_coef * 1000  # Молярный объем диоксида углерода при норм температуре кипения, см3/моль
         Vv_co2 = Vmol_co2 / Vcr_co2
+
         D_coef_ips_co2 = A_coef * 10 ** (-9) * (T / M_ips) ** 0.5 * math.exp(
             -0.3887 / (Vv_co2 - 0.23))  # коэффициент диффузии ипс в CO2
 
@@ -238,8 +239,94 @@ class scd_apparatus():
                 c_temp[0] = c_temp[1]
                 return c_temp
 
-    def fick_changed(self, T, P, flowrate, n_t, dr, dt):
-        density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = self.density_co2_and_viscos(T, P)
+    # def fick_changed(self, T, P, flowrate, n_t, dr, dt):
+    #     density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = self.density_co2_and_viscos(T, P)
+    #
+    #     y_start = optimize.golden(self.golden_method, maxiter=10000)  # массовая доля, кг/кгсм
+    #     V_ips = []
+    #     density_mixture = []
+    #     h_arr = []
+    #
+    #     h_arr.append(0)
+    #     for i in range(1, num_steps + 2):
+    #         h_arr.append(R / num_steps + h_arr[i - 1])
+    #     v = 1
+    #     """
+    #     костыль, но как есть. Используется для цилиндра
+    #     """
+    #     y_fick = []  # создаю список массовых долей
+    #     y_fick.append([y_start for i in range(0, num_steps + 2)])  # наполняю его начальным условиями
+    #     V_ips.append( (density_co2 * y_start[i] / (density_ips * (1 - y_start[i]) + density_co2 * y_start[i]))  for i in range(0, num_steps +2))
+    #     density_mixture.append((density_ips * V_ips[j] + density_co2 * (1 - V_ips[j])) for j in range(0, num_steps+2))
+    #     c_changed = []
+    #     c_changed.append((density_ips) for k in range(0, num_steps+2))
+    #
+    #     M_ips_in_gel = []  # Мольная доля
+    #     D_coef_mol_in_gel = []
+    #     n_t = 100
+    #     for time_step in range(0, round(n_t)):
+    #         if time_step > 0:
+    #             c_coef_new = [None] * (num_steps + 2)
+    #             a_coef_new = [None] * (num_steps + 2)
+    #             b_coef_new = [None] * (num_steps + 2)
+    #
+    #             alfa_new = [1] * (num_steps + 2)
+    #             beta_new = [0] * (num_steps + 2)
+    #
+    #             y_fick.append([0] * (num_steps + 2))
+    #             density_mixture.append([0] * (num_steps + 2))
+    #             V_ips.append([0] * (num_steps + 2))
+    #             c_changed.append([0]* (num_steps+2))
+    #
+    #
+    #             y_fick[time_step][-1] = c_bound
+    #             V_ips[time_step][-1] = 0
+    #             density_mixture[time_step][-1] = density_co2
+    #
+    #             for i in range(1, num_steps+1):
+    #                 c_coef_new[i] = (D_coef_mol_in_gel[time_step - 1][i] + D_coef_mol_in_gel[time_step - 1][
+    #                     i - 1]) * target_material_porosity / tau_izv / 2 * (
+    #                                         (h_arr[i] ** v + h_arr[i - 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
+    #
+    #                 a_coef_new[i] = (D_coef_mol_in_gel[time_step - 1][i] + D_coef_mol_in_gel[time_step - 1][
+    #                     i + 1]) * target_material_porosity / tau_izv / 2 * (
+    #                                         (h_arr[i] ** v + h_arr[i + 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
+    #
+    #                 b_coef_new[i] = 1 / dt + a_coef_new[i] + c_coef_new[i]
+    #
+    #                 alfa_new[i] = a_coef_new[i] / (b_coef_new[i] - alfa_new[i - 1] * c_coef_new[i])
+    #                 beta_new[i] = (beta_new[i - 1] * c_coef_new[i] + y_fick[time_step - 1][i] / dt) / (
+    #                         b_coef_new[i] - alfa_new[i - 1] * c_coef_new[i])
+    #
+    #             for i in range(num_steps, 0, -1):
+    #
+    #                 y_fick[time_step][i] = alfa_new[i] * y_fick[time_step][i + 1] + beta_new[i]
+    #
+    #                 V_ips[time_step][i] = density_co2 * y_fick[time_step][i] / (density_ips * (1 - y_fick[time_step][i]) + density_co2 * y_fick[time_step][i])
+    #                 density_mixture[time_step][i] = density_ips * V_ips[time_step][i] + density_co2 * (1 - V_ips[time_step][i])
+    #
+    #
+    #
+    #             y_fick[time_step][0] = y_fick[time_step][1]
+    #             V_ips[time_step][0] = V_ips[time_step][1]
+    #             density_mixture[time_step][0] = density_mixture[time_step][1]
+    #             print('Первое значение y', y_fick[time_step][0], 'первое знанием D', density_mixture[time_step][0])
+    #             for i in range(0, num_steps+2):
+    #                 c_changed[time_step][i] = y_fick[time_step][i] * density_mixture[time_step][i]
+    #
+    #         M_ips_in_gel.append([M_co2 / 1000 * y_fick[time_step][i] / ((1 - y_fick[time_step][i]) * M_ips / 1000 + y_fick[time_step][i] * M_co2 / 1000) for i in
+    #                              range(0, num_steps + 2)])
+    #
+    #         D_coef_mol_in_gel.append([D_coef_co2_ips ** M_ips_in_gel[time_step][i] * D_coef_ips_co2 ** (1 - M_ips_in_gel[time_step][i]) for
+    #              i in range(0, num_steps + 2)])
+    #
+    #     print('density', c_changed)
+    #     print('плотность углерода', density_co2)
+    #     return y_fick
+
+    def fick_changed_fin(self, T, P, flowrate, n_t, dr, dt):
+        density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = self.density_co2_and_viscos(
+            T, P)
 
         y_start = optimize.golden(self.golden_method, maxiter=10000)  # массовая доля, кг/кгсм
         V_ips = []
@@ -255,72 +342,68 @@ class scd_apparatus():
         """
         y_fick = []  # создаю список массовых долей
         y_fick.append([y_start for i in range(0, num_steps + 2)])  # наполняю его начальным условиями
-        V_ips.append( (density_co2 * y_start[i] / (density_ips * (1 - y_start[i]) + density_co2 * y_start[i]))  for i in range(0, num_steps +2))
-        density_mixture.append((density_ips * V_ips[j] + density_co2 * (1 - V_ips[j])) for j in range(0, num_steps+2))
+        V_ips.append((density_co2 * y_start[i] / (density_ips * (1 - y_start[i]) + density_co2 * y_start[i])) for i in
+                     range(0, num_steps + 2))
+        density_mixture.append((density_ips * V_ips[j] + density_co2 * (1 - V_ips[j])) for j in range(0, num_steps + 2))
         c_changed = []
-        c_changed.append((density_ips) for k in range(0, num_steps+2))
+        c_changed.append((density_ips * V_ips[k]) for k in range(0, num_steps + 2))
 
+        c_coef_new = [None] * (num_steps + 2)
+        a_coef_new = [None] * (num_steps + 2)
+        b_coef_new = [None] * (num_steps + 2)
+        alfa_new = [1] * (num_steps + 2)
+        beta_new = [0] * (num_steps + 2)
 
         M_ips_in_gel = []  # Мольная доля
         D_coef_mol_in_gel = []
-        n_t = 100
-        for time_step in range(0, round(n_t)):
-            if time_step > 0:
-                c_coef_new = [None] * (num_steps + 2)
-                a_coef_new = [None] * (num_steps + 2)
-                b_coef_new = [None] * (num_steps + 2)
 
-                alfa_new = [1] * (num_steps + 2)
-                beta_new = [0] * (num_steps + 2)
+        for i in range(0, num_steps + 2):
+            c_changed[i] = y_fick[i] * density_mixture[i]
 
-                y_fick.append([0] * (num_steps + 2))
-                density_mixture.append([0] * (num_steps + 2))
-                V_ips.append([0] * (num_steps + 2))
-                c_changed.append([0]* (num_steps+2))
-
-
-                y_fick[time_step][-1] = c_bound
-                V_ips[time_step][-1] = 0
-                density_mixture[time_step][-1] = density_co2
-
-                for i in range(1, num_steps+1):
-                    c_coef_new[i] = (D_coef_mol_in_gel[time_step - 1][i] + D_coef_mol_in_gel[time_step - 1][
-                        i - 1]) * target_material_porosity / tau_izv / 2 * (
-                                            (h_arr[i] ** v + h_arr[i - 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
-
-                    a_coef_new[i] = (D_coef_mol_in_gel[time_step - 1][i] + D_coef_mol_in_gel[time_step - 1][
-                        i + 1]) * target_material_porosity / tau_izv / 2 * (
-                                            (h_arr[i] ** v + h_arr[i + 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
-
-                    b_coef_new[i] = 1 / dt + a_coef_new[i] + c_coef_new[i]
-
-                    alfa_new[i] = a_coef_new[i] / (b_coef_new[i] - alfa_new[i - 1] * c_coef_new[i])
-                    beta_new[i] = (beta_new[i - 1] * c_coef_new[i] + y_fick[time_step - 1][i] / dt) / (
-                            b_coef_new[i] - alfa_new[i - 1] * c_coef_new[i])
-
-                for i in range(num_steps, 0, -1):
-
-                    y_fick[time_step][i] = alfa_new[i] * y_fick[time_step][i + 1] + beta_new[i]
-
-                    V_ips[time_step][i] = density_co2 * y_fick[time_step][i] / (density_ips * (1 - y_fick[time_step][i]) + density_co2 * y_fick[time_step][i])
-                    density_mixture[time_step][i] = density_ips * V_ips[time_step][i] + density_co2 * (1 - V_ips[time_step][i])
-
-
-
-                y_fick[time_step][0] = y_fick[time_step][1]
-                V_ips[time_step][0] = V_ips[time_step][1]
-                density_mixture[time_step][0] = density_mixture[time_step][1]
-                print('Первое значение y', y_fick[time_step][0], 'первое знанием D', density_mixture[time_step][0])
-                for i in range(0, num_steps+2):
-                    c_changed[time_step][i] = y_fick[time_step][i] * density_mixture[time_step][i]
-
-            M_ips_in_gel.append([M_co2 / 1000 * y_fick[time_step][i] / ((1 - y_fick[time_step][i]) * M_ips / 1000 + y_fick[time_step][i] * M_co2 / 1000) for i in
+            M_ips_in_gel.append([M_co2 / 1000 * y_fick[i] / (
+                        (1 - y_fick[i]) * M_ips / 1000 + y_fick[i] * M_co2 / 1000) for i in
                                  range(0, num_steps + 2)])
 
-            D_coef_mol_in_gel.append([D_coef_co2_ips ** M_ips_in_gel[time_step][i] * D_coef_ips_co2 ** (1 - M_ips_in_gel[time_step][i]) for
+            D_coef_mol_in_gel.append(
+                [D_coef_co2_ips ** M_ips_in_gel[i] * D_coef_ips_co2 ** (1 - M_ips_in_gel[i]) for
                  i in range(0, num_steps + 2)])
 
+        y_fick.append([0] * (num_steps + 2))
+        density_mixture.append([0] * (num_steps + 2))
+        V_ips.append([0] * (num_steps + 2))
+        c_changed.append([0] * (num_steps + 2))
+
+        for i in range(1, num_steps + 1):
+            c_coef_new[i] = (D_coef_mol_in_gel[i] + D_coef_mol_in_gel[i - 1]) * target_material_porosity / tau_izv / 2 * (
+                                    (h_arr[i] ** v + h_arr[i - 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
+
+            a_coef_new[i] = (D_coef_mol_in_gel[i] + D_coef_mol_in_gel[
+                i + 1]) * target_material_porosity / tau_izv / 2 * (
+                                    (h_arr[i] ** v + h_arr[i + 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
+
+            b_coef_new[i] = 1 / dt + a_coef_new[i] + c_coef_new[i]
+
+            alfa_new[i] = a_coef_new[i] / (b_coef_new[i] - alfa_new[i - 1] * c_coef_new[i])
+            beta_new[i] = (beta_new[i - 1] * c_coef_new[i] + y_fick[i] / dt) / (
+                    b_coef_new[i] - alfa_new[i - 1] * c_coef_new[i])
+
+        for i in range(num_steps, 0, -1):
+            y_fick[i] = alfa_new[i] * y_fick[i + 1] + beta_new[i]
+
+            V_ips[i] = density_co2 * y_fick[i] / (
+                        density_ips * (1 - y_fick[i]) + density_co2 * y_fick[i])
+            density_mixture[i] = density_ips * V_ips[i] + density_co2 * (
+                        1 - V_ips[i])
+
+        y_fick[-1] = c_bound
+        V_ips[-1] = 0
+        density_mixture[-1] = density_co2
+        y_fick[0] = y_fick[1]
+        V_ips[0] = V_ips[1]
+        density_mixture[0] = density_mixture[1]
+        print('Первое значение y', y_fick[0], 'первое знанием D', density_mixture[0])
         print('density', c_changed)
+        print('плотность углерода', density_co2)
         return y_fick
     def fick_mass(self, c, length, width):
         m = 0.
@@ -392,7 +475,7 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     time = np.linspace(0, proc_time, n_t)
     value = ['one_dim', 'cyl', 'sphere']
 
-    key_sch = ['explicit', 'implicit']
+    key_sch = ['explicit', 'implicit', 'implicit modified']
     for i in value:
         for j in key_sch:
             matrix_of_c, list_of_mass, c_app = object1.time_iteration(T, P, c_init_list, volume, flowrate, n_t, dt, dr, key = i, key_sch = j)
