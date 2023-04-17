@@ -325,10 +325,6 @@ class scd_apparatus():
     #     return y_fick
 
     def fick_changed_fin(self, T, P, flowrate, n_t, dr, dt):
-        density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = self.density_co2_and_viscos(
-            T, P)
-
-        y_start = optimize.golden(self.golden_method, maxiter=10000)  # массовая доля, кг/кгсм
         V_ips = []
         density_mixture = []
         h_arr = []
@@ -337,17 +333,13 @@ class scd_apparatus():
         for i in range(1, num_steps + 2):
             h_arr.append(R / num_steps + h_arr[i - 1])
         v = 1
+
         """  
         костыль, но как есть. Используется для цилиндра
         """
-        y_fick = []  # создаю список массовых долей
-        y_fick.append([y_start for i in range(0, num_steps + 2)])  # наполняю его начальным условиями
-        V_ips.append((density_co2 * y_start[i] / (density_ips * (1 - y_start[i]) + density_co2 * y_start[i])) for i in
-                     range(0, num_steps + 2))
-        density_mixture.append((density_ips * V_ips[j] + density_co2 * (1 - V_ips[j])) for j in range(0, num_steps + 2))
-        c_changed = []
-        c_changed.append((density_ips * V_ips[k]) for k in range(0, num_steps + 2))
 
+
+        c_changed = []
         c_coef_new = [None] * (num_steps + 2)
         a_coef_new = [None] * (num_steps + 2)
         b_coef_new = [None] * (num_steps + 2)
@@ -430,18 +422,19 @@ class scd_apparatus():
         mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width)
         c_app[0] = 0.
         for i in range(1, n_t):
-            c_bound = c_app[i - 1]
-            c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
+            if self.key_sch == ('implicit' or 'explicit'):
+                c_bound = c_app[i - 1]
+                c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
 
-            if volume * load_perc < self.V_gels:
-                method_value = 5
-                pass
+                if volume * load_perc < self.V_gels:
+                    method_value = 5
+                    pass
 
-            else:
-                if method_value != 5:
-                    mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width)
-                    delta_mass = - self.number_samples * (mass_list[i] - mass_list[i - 1])
-                    c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
+                else:
+                    if method_value != 5:
+                        mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width)
+                        delta_mass = - self.number_samples * (mass_list[i] - mass_list[i - 1])
+                        c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
 
         return c_matrix, mass_list, c_app
 
@@ -468,14 +461,39 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     object1 = scd_apparatus(T, P, volume, flowrate, width, length, height, diff_coef, value, key_sch, number_samples)
     object1.__str__()
 
-    matrix = object1.fick_changed( T, P, flowrate, n_t, dr, dt)
+
+    y_start = float(optimize.golden(object1.golden_method, maxiter=10000))  # массовая доля, кг/кгсм
+    density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = object1.density_co2_and_viscos(
+        T, P)
+    print('density', density_co2)
+    V_ips = []
+    density_mixture = []
+    h_arr = []
+    y_fick = []  # создаю список массовых долей
+    c_changed = []
+
+    y_fick = [y_start] * (num_steps +2) # наполняю его начальным условиями
+    print('y_fick', y_fick)
+    V_ips = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)
+    print('y_fick', V_ips)
+    density_mixture = np.zeros(num_steps+2)
+    for i in range(num_steps+2):
+        density_mixture[i] = density_ips * V_ips + density_co2 * (1 - V_ips)
+    #density_mixture = [density_ips * V_ips + density_co2 * (1 - V_ips)] * (num_steps + 2)
+
+    c_changed = [density_ips * V_ips] * (num_steps + 2)
+
+    print('концентрация', c_changed)
+
+
 
 
     print('n_t:', n_t, 'proc_time:', proc_time, 'variable of item',value)
     time = np.linspace(0, proc_time, n_t)
-    value = ['one_dim', 'cyl', 'sphere']
 
+    value = ['one_dim', 'cyl', 'sphere']
     key_sch = ['explicit', 'implicit', 'implicit modified']
+
     for i in value:
         for j in key_sch:
             matrix_of_c, list_of_mass, c_app = object1.time_iteration(T, P, c_init_list, volume, flowrate, n_t, dt, dr, key = i, key_sch = j)
