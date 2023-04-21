@@ -61,7 +61,7 @@ img_path = os.path.join(file_path, 'Images')
 num_steps = 100  # количество шагов
 l = np.empty(num_steps + 2, dtype=np.int16)
 
-proc_time = 15*360
+proc_time = 25*3600
 c_bound = 0.
 c_init = 10.
 
@@ -243,6 +243,7 @@ class scd_apparatus():
         sverka_method = 0
 
         print('граничное условие', y_bound)
+
         h_arr = []
         h_arr.append(0)
         for i in range(1, num_steps + 2):
@@ -266,7 +267,6 @@ class scd_apparatus():
         V_ips = []
 
         for i in range(0, num_steps + 2):
-
             M_ips_gel = M_co2 / 1000 * y_fick_fin[i] / (
                         (1 - y_fick_fin[i]) * M_ips / 1000 + y_fick_fin[i] * M_co2 / 1000)
 
@@ -316,7 +316,7 @@ class scd_apparatus():
         for i in range(0, num_steps + 2):
             c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
 
-        return y_fick_fin, c_changed_fin
+        return y_fick_fin, c_changed_fin, density_mixture
     def fick_mass(self, c, length, width):
         m = 0.
         for i in range(1, len(c)):
@@ -346,13 +346,17 @@ class scd_apparatus():
         c_matrix = np.zeros((n_t, len(c_init_list)))
         c_matrix_changed = np.zeros((n_t, len(c_changed_init)))
         y_fick_changed = np.zeros((n_t, len(y_fick_init)))
-
+        density_mix = np.zeros((n_t, len(y_fick_init)))
 
         c_matrix[0] = c_init_list
         c_matrix_changed[0] = c_changed_init
         y_fick_changed[0] = y_fick_init
+        density_mix[0] = density_ips
 
-        mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width)
+        if self.key_sch == ('implicit' or 'explicit'):
+            mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width)
+        elif self.key_sch == 'implicit modified':
+            mass_list[0] = self.fick_mass(c_matrix_changed[0], self.length, self.width)
         c_app[0] = 0.
 
         for i in range(1, n_t):
@@ -364,12 +368,11 @@ class scd_apparatus():
             y_bound = y_boundary
             c_bound = c_app[i - 1]
 
-
             if self.key_sch == ('implicit' or 'explicit'):
                 c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
 
             elif self.key_sch == 'implicit modified':
-                y_fick_changed[i], c_matrix_changed[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r)
+                y_fick_changed[i], c_matrix_changed[i], density_mix[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r)
 
             if volume * load_perc < self.V_gels:
                 method_value = 5
@@ -381,14 +384,17 @@ class scd_apparatus():
                         mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width)
                     elif self.key_sch == 'implicit modified':
                         mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width) #для новой модели
+
                     delta_mass = - self.number_samples * (mass_list[i] - mass_list[i - 1])
 
-                    y_boundary = y_fick_changed[i][-1]
+                    #y_boundary = y_fick_changed[i][-1]
 
                     #y_boundary = self.converting_y( y_fick_changed[i])
-                    print('Граница', y_boundary)
+                    #print('Граница', y_boundary)
                     c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
-
+                    print('c_app' , c_app[i])
+                    y_boundary = c_app[i] / density_mix[i][-1]
+                    # print('Граница', y_boundary)
         return c_matrix, mass_list, c_app
 
     def ideal_mixing(self, c, c_inlet, residence_time, dt, volume, delta_mass):
@@ -420,6 +426,7 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
         T, P)
 
     y_fick = [y_start] * (num_steps +2) # создаю список массовых долей и наполняю его начальным условиями
+    # y_fick[-1] = 0
     y_fick_init = y_fick
 
     V_ips = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)
