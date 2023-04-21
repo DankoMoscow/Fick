@@ -296,7 +296,6 @@ class scd_apparatus():
         y_fick_fin[-1] = y_bound
         y_fick_fin[0] = y_fick_fin[1]
 
-        print('y_fick последний', y_fick_fin[-1])
         density_mixture_num = None
 
         for i in range(0, num_steps + 2):
@@ -339,7 +338,6 @@ class scd_apparatus():
         residence_time = volume / flowrate
 
         c_app = np.zeros(n_t)
-        #y_boundary = np.zeros(n_t)
         mass_list = np.zeros(n_t)
 
 
@@ -361,9 +359,7 @@ class scd_apparatus():
 
         for i in range(1, n_t):
             if i == 1:
-                y_boundary = y_start
-
-            print('Итерация', i)
+                y_boundary = 0
 
             y_bound = y_boundary
             c_bound = c_app[i - 1]
@@ -394,9 +390,12 @@ class scd_apparatus():
                     c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
                     print('c_app' , c_app[i])
                     y_boundary = c_app[i] / density_mix[i][-1]
-                    # print('Граница', y_boundary)
-        return c_matrix, mass_list, c_app
 
+        if self.key_sch == ('implicit' or 'explicit'):
+            return c_matrix, mass_list, c_app
+
+        elif self.key_sch == 'implicit modified':
+            return c_matrix_changed, mass_list, c_app
     def ideal_mixing(self, c, c_inlet, residence_time, dt, volume, delta_mass):
         c_mixing = c + dt / residence_time * (c_inlet - c) + dt * delta_mass / volume
         return c_mixing
@@ -426,7 +425,7 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
         T, P)
 
     y_fick = [y_start] * (num_steps +2) # создаю список массовых долей и наполняю его начальным условиями
-    # y_fick[-1] = 0
+    y_fick[-1] = 0
     y_fick_init = y_fick
 
     V_ips = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)
@@ -434,12 +433,15 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
 
     for i in range(num_steps+2):
         density_mixture[i] = density_ips * V_ips + density_co2 * (1 - V_ips)
+        if i == num_steps + 1:
+            density_mixture[i] = density_co2
+
 
     c_changed_init = np.zeros(num_steps + 2)
     for i in range(num_steps + 2):
         c_changed_init[i] = density_ips * V_ips
         if i == num_steps + 1:
-            c_changed_init[i] = density_co2
+            c_changed_init[i] = 0
 
 
     print('n_t:', n_t, 'proc_time:', proc_time, 'variable of item',value)
