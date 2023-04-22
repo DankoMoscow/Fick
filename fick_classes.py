@@ -7,7 +7,9 @@ import math
 from scipy import optimize
 from scipy.optimize import minimize
 import time
-import PySimpleGUI as sg #библиотека для создания шкалы процесса
+import PySimpleGUI as psg #библиотека для создания шкалы процесса
+from tqdm import tqdm
+
 
 
 load_perc = 0.7 # доля загрузки аппарата СКС
@@ -64,7 +66,7 @@ img_path = os.path.join(file_path, 'Images')
 num_steps = 100  # количество шагов
 l = np.empty(num_steps + 2, dtype=np.int16)
 
-proc_time = 25*3600
+proc_time = 45*3600
 c_bound = 0.
 c_init = 10.
 
@@ -334,46 +336,6 @@ class scd_apparatus():
         y_list = y
         return y_list
 
-    def visualization_process(self, stage):
-
-        mylist = []
-        mylist.append(stage)
-        progressbar = [
-            [sg.ProgressBar(len(mylist), orientation='h', size=(51, 10), key='progressbar')]
-        ]
-        outputwin = [
-            [sg.Output(size=(78, 20))]
-        ]
-
-        layout = [
-            [sg.Frame('Progress', layout=progressbar)],
-            [sg.Frame('Output', layout=outputwin)],
-            [sg.Submit('Start'), sg.Cancel()]
-        ]
-        window = sg.Window('Custom Progress Meter', layout)
-        progress_bar = window['progressbar']
-
-        while True:
-            event, values = window.read(timeout=10)
-            if event == 'Cancel' or event is None:
-                break
-            elif event == 'Start':
-                for i, item in enumerate(mylist):
-                    print(item)
-                    time.sleep(1)
-                    progress_bar.UpdateBar(i + 1)
-
-        window.close()
-        pass
-
-    # def show_time_process(self, list):
-    #     condition_stop = list[0] * 0.05
-    #
-    #     for n, value in enumerate(list):
-    #         stage = round(abs(value - list[0]) / list[0] * 100 / 0.95, 1)
-    #         visualization_process(stage)
-    #
-    #     return n, slovo
 
     def time_iteration(self, T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, key, key_sch):
         global method_value
@@ -399,7 +361,12 @@ class scd_apparatus():
             mass_list[0] = self.fick_mass(c_matrix_changed[0], self.length, self.width)
         c_app[0] = 0.
 
-        for i in range(1, n_t):
+        layout = [
+            [psg.ProgressBar(100, orientation='h', expand_x=True, size=(20, 20), key='-PBAR-'), psg.Button('Test')],
+            [psg.Text('', key='-OUT-', enable_events=True, font=('Arial Bold', 16), justification='center',
+                      expand_x=True)]]
+        window = psg.Window('Progress Bar', layout, size=(715, 150))
+        for i in tqdm(range(1, n_t)):
             if i == 1:
                 y_boundary = 0
 
@@ -430,7 +397,6 @@ class scd_apparatus():
                     y_boundary = c_app[i] / density_mix[i][-1]
 
 
-                    print('список массы', mass_list[i])
         if self.key_sch == ('implicit' or 'explicit'):
             return c_matrix, mass_list, c_app
 
