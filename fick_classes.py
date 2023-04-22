@@ -6,6 +6,9 @@ import os
 import math
 from scipy import optimize
 from scipy.optimize import minimize
+import time
+import PySimpleGUI as sg #библиотека для создания шкалы процесса
+
 
 load_perc = 0.7 # доля загрузки аппарата СКС
 
@@ -242,7 +245,6 @@ class scd_apparatus():
         global sverka_method
         sverka_method = 0
 
-        print('граничное условие', y_bound)
 
         h_arr = []
         h_arr.append(0)
@@ -275,7 +277,7 @@ class scd_apparatus():
 
             D_coef_mol_in_gel.append(D_coef_mol_gel)
 
-        print('коэффициеент диффузии', D_coef_mol_gel)
+
         for i in range(1, num_steps + 1):
             c_coef_new[i] = (D_coef_mol_in_gel[i] + D_coef_mol_in_gel[i - 1]) * target_material_porosity / tau_izv / 2 * (
                                     (h_arr[i] ** v + h_arr[i - 1] ** v) / 2) / (dr ** 2 * h_arr[i] ** v)
@@ -332,6 +334,47 @@ class scd_apparatus():
         y_list = y
         return y_list
 
+    def visualization_process(self, stage):
+
+        mylist = []
+        mylist.append(stage)
+        progressbar = [
+            [sg.ProgressBar(len(mylist), orientation='h', size=(51, 10), key='progressbar')]
+        ]
+        outputwin = [
+            [sg.Output(size=(78, 20))]
+        ]
+
+        layout = [
+            [sg.Frame('Progress', layout=progressbar)],
+            [sg.Frame('Output', layout=outputwin)],
+            [sg.Submit('Start'), sg.Cancel()]
+        ]
+        window = sg.Window('Custom Progress Meter', layout)
+        progress_bar = window['progressbar']
+
+        while True:
+            event, values = window.read(timeout=10)
+            if event == 'Cancel' or event is None:
+                break
+            elif event == 'Start':
+                for i, item in enumerate(mylist):
+                    print(item)
+                    time.sleep(1)
+                    progress_bar.UpdateBar(i + 1)
+
+        window.close()
+        pass
+
+    # def show_time_process(self, list):
+    #     condition_stop = list[0] * 0.05
+    #
+    #     for n, value in enumerate(list):
+    #         stage = round(abs(value - list[0]) / list[0] * 100 / 0.95, 1)
+    #         visualization_process(stage)
+    #
+    #     return n, slovo
+
     def time_iteration(self, T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, key, key_sch):
         global method_value
         method_value = 0  # костыль для определения и не вылетания объёма аппарата
@@ -339,7 +382,6 @@ class scd_apparatus():
 
         c_app = np.zeros(n_t)
         mass_list = np.zeros(n_t)
-
 
         c_matrix = np.zeros((n_t, len(c_init_list)))
         c_matrix_changed = np.zeros((n_t, len(c_changed_init)))
@@ -383,14 +425,12 @@ class scd_apparatus():
 
                     delta_mass = - self.number_samples * (mass_list[i] - mass_list[i - 1])
 
-                    #y_boundary = y_fick_changed[i][-1]
-
-                    #y_boundary = self.converting_y( y_fick_changed[i])
-                    #print('Граница', y_boundary)
                     c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
-                    print('c_app' , c_app[i])
+
                     y_boundary = c_app[i] / density_mix[i][-1]
 
+
+                    print('список массы', mass_list[i])
         if self.key_sch == ('implicit' or 'explicit'):
             return c_matrix, mass_list, c_app
 

@@ -13,7 +13,7 @@ import bokeh
 import plotly.express as px
 from datetime import datetime
 import plotly.io as pio
-
+import PySimpleGUI as sg #библиотека для создания шкалы процесса
 pio.templates
 
 pid = os.getpid()
@@ -113,14 +113,19 @@ def work_process():
 def get_time():
     static_time.value = delta_time
 
+
 def show_time_process(list):
     condition_stop = list[0] * 0.05
+
     for n, value in enumerate(list):
+        stage = round(abs(value-list[0])/list[0] * 100/0.95, 1)
+
         if value <= condition_stop:
             slovo = 'Сушка проведена успешно'
             break
         else:
             slovo = 'Время сушки недостаточно. Содержание спирта в образцах выше запланированного'
+
     return n, slovo
 
 def run(event):
@@ -129,7 +134,8 @@ def run(event):
     matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(313, 120, float_width.value, float_length.value, float_height.value,
         float_volume.value, float_flowrate.value, float_dt.value, float_diff_coef.value, int_number_samples.value, group_of_key.value, group_of_ways.value, static_text.value,static_cond.value)
 
-    n, slovo = show_time_process(list_of_mass)
+    n, slovo= show_time_process(list_of_mass)
+
     get_time_drying(n)
     view_end_process(slovo)
     template = "plotly_white"
