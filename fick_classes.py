@@ -337,7 +337,7 @@ class scd_apparatus():
         return y_list
 
 
-    def time_iteration(self, T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, key, key_sch):
+    def time_iteration(self, T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr):
         global method_value
         method_value = 0  # костыль для определения и не вылетания объёма аппарата
         residence_time = volume / flowrate
@@ -366,7 +366,10 @@ class scd_apparatus():
             [psg.Text('', key='-OUT-', enable_events=True, font=('Arial Bold', 16), justification='center',
                       expand_x=True)]]
         window = psg.Window('Progress Bar', layout, size=(715, 150))
-        for i in tqdm(range(1, n_t)):
+        event, values = window.read()
+        if event == 'Test':
+            window['Test'].update(disabled=True)
+        for i in range(1, n_t):
             if i == 1:
                 y_boundary = 0
 
@@ -396,7 +399,11 @@ class scd_apparatus():
 
                     y_boundary = c_app[i] / density_mix[i][-1]
 
-
+            window['-PBAR-'].update(current_count=i + 1)
+            window['-OUT-'].update(str(i + 1))
+            #time.sleep(0.0001)
+            window['Test'].update(disabled=False)
+        window.close()
         if self.key_sch == ('implicit' or 'explicit'):
             return c_matrix, mass_list, c_app
 
@@ -456,9 +463,7 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     value = ['one_dim', 'cyl', 'sphere']
     key_sch = ['explicit', 'implicit', 'implicit modified']
 
-    for i in value:
-        for j in key_sch:
-            matrix_of_c, list_of_mass, c_app = object1.time_iteration(T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, key = i, key_sch = j)
-
+    matrix_of_c, list_of_mass, c_app = object1.time_iteration(T, P, c_init_list, c_changed_init, y_fick_init,
+                                                              D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr)
     print('sverka', sverka_method)
     return matrix_of_c, list_of_mass, c_app, time, i, r, method_value, sverka_method
