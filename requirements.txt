@@ -49,3 +49,6 @@ selenium~=4.6.0
 plotly~=5.11.0
 tenacity~=8.1.0
 scipy~=1.10.0
+openpyxl~=3.1.2
+grapheme~=0.6.0
+PySimpleGUI~=4.60.4
