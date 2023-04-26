@@ -3,7 +3,8 @@ import holoviews as hv
 import panel.command
 #import numpy
 import fick_classes
-#import fick_classes_changed
+import pandas as pd
+import openpyxl
 import os, sys
 import plotly.graph_objs as go
 from mpl_toolkits.mplot3d import Axes3D
@@ -30,13 +31,13 @@ float_width = pn.widgets.FloatSlider(name='Ширина образцов', start
 float_length = pn.widgets.FloatSlider(name='Длина образцов', start=0.1, end=1, step=0.1, value=0.5,
                                       format=PrintfTickFormatter(format='%.2f м'))
 
-float_height = pn.widgets.FloatSlider(name='Высота образца', start=0.01, end=0.2, step=0.01, value=0.05,
-                                      format=PrintfTickFormatter(format='%.2f м'))
+float_height = pn.widgets.FloatSlider(name='Высота образца', start=0.01, end=0.2, step=0.001, value=0.05,
+                                      format=PrintfTickFormatter(format='%.3f м'))
 
 float_volume = pn.widgets.FloatSlider(name='Объём аппарата', start=0.1, end=1, step=0.1, value=0.3,
                                       format=PrintfTickFormatter(format='%.2f кубических метров'))
 
-float_flowrate = pn.widgets.FloatSlider(name='Объёмный расход', start=0.000001, end=0.001, step=0.00001, value=0.0001,
+float_flowrate = pn.widgets.FloatSlider(name='Объёмный расход', start=0.000001, end=0.001, step=0.000001, value=0.0001,
                                         format=PrintfTickFormatter(format='%.6f кубических метров в секунду'))
 
 float_dt = pn.widgets.FloatSlider(name='Шаг по времени', start=10, end=200, step=10, value=50)
@@ -80,7 +81,7 @@ dop_column = pn.Column(pressure_select, temperature_select)
 
 #виджеты для отображения
 
-main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main,
+main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main, dop_column,
                           static_text, static_cond, static_time,
                           static_time_process, static_time_process_result,  button, button_exit)
 
@@ -114,6 +115,11 @@ def get_time():
     static_time.value = delta_time
 
 
+def save_time(var_time):
+    list_time = []
+    list_time.append(var_time)
+    return list_time
+
 def show_time_process(list):
     condition_stop = list[0] * 0.05
 
@@ -130,9 +136,16 @@ def show_time_process(list):
 
 def run(event):
     start_time = datetime.now()
-    global main_window, float_width,float_dt, float_length, float_diff_coef, int_number_samples, podskazka, delta_time, cond_scheme
-    matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(313, 120, float_width.value, float_length.value, float_height.value,
+    global main_window, float_width, float_dt, float_length, float_diff_coef, int_number_samples, podskazka, delta_time, cond_scheme, temperature_select, pressure_select
+
+    matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(temperature_select.value, pressure_select.value, float_width.value, float_length.value, float_height.value,
         float_volume.value, float_flowrate.value, float_dt.value, float_diff_coef.value, int_number_samples.value, group_of_key.value, group_of_ways.value, static_text.value,static_cond.value)
+
+
+    file = pd.DataFrame(list_of_mass)
+    file.to_excel('Death.xlsx')
+
+
 
     n, slovo= show_time_process(list_of_mass)
 
@@ -160,6 +173,10 @@ def run(event):
                 zaxis_title='Концентрация спирта, кг/метр3', xaxis = dict(gridcolor='LightPink'), yaxis = dict(gridcolor='LightPink'), zaxis = dict(gridcolor='LightPink')),
                           width=500, height=500, margin=dict(l=10, r=20, b=35, t=30))
 
+
+    #plot_time_and_P_T = go.Figure(data = [go.Surface(x = P, y = T, z = hhh)])
+
+
     get_condition()
     work_process()
     plots = pn.Row(pn.Spacer(width=100), plot_mass, pn.Spacer(width=50), plot_conc, pn.Spacer(width=50), sizing_mode='stretch_width')
@@ -171,6 +188,9 @@ def run(event):
     main_window[3] = main_plots
 
 
+    variable_time = static_time_process.value
+    hhh =  save_time(variable_time)
+    print('hhh', hhh)
     end_time = datetime.now()
     delta_time = end_time - start_time
     get_time()

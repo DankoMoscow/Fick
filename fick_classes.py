@@ -10,8 +10,6 @@ import time
 import PySimpleGUI as psg #библиотека для создания шкалы процесса
 from tqdm import tqdm
 
-
-
 load_perc = 0.7 # доля загрузки аппарата СКС
 
 target_material_porosity = 120 #кг/м3
@@ -68,7 +66,7 @@ l = np.empty(num_steps + 2, dtype=np.int16)
 
 proc_time = 45*3600
 c_bound = 0.
-c_init = 10.
+
 
 class scd_apparatus():
     def __init__(self, T, P, volume, flowrate, width, length, height, diff_coef, key, key_sch, number_samples):
@@ -148,7 +146,6 @@ class scd_apparatus():
         betta_i[0] = 0  # прогоночный коэффициент бетта на нулевом шаге
         c_temp = []
         c_temp = np.copy(c)
-        #density_co2 = self.density_co2_and_viscos(T, P)
 
         if self.key == 'one_dim':
             if self.key_sch == 'explicit':
@@ -181,7 +178,6 @@ class scd_apparatus():
         elif self.key == 'cyl':
             if self.key_sch == 'explicit':
                 if dt> dr/(2 *self.diff_coef*porosity/tau_izv):
-                #if 2 * self.diff_coef * stab_cond <= 1:  # (2*diff_coef*dt-dt)/ dr**2 <= 1:     #diff_coef*(dt/dr + 2 * stab_cond) > 1:страница 84 методички
                     sverka_method = 5
                     pass
                 else:
@@ -246,7 +242,6 @@ class scd_apparatus():
     def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r):
         global sverka_method
         sverka_method = 0
-
 
         h_arr = []
         h_arr.append(0)
@@ -320,7 +315,7 @@ class scd_apparatus():
             c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
 
         return y_fick_fin, c_changed_fin, density_mixture
-    def fick_mass(self, c, length, width):
+    def fick_mass(self, c, length, width, number_samples):
         m = 0.
         for i in range(1, len(c)):
             if self.key == 'sphere':
@@ -329,15 +324,13 @@ class scd_apparatus():
                 m += c[i] * length * np.pi * ((i * dr) ** 2 - ((i - 1) * dr) ** 2)
             elif self.key == 'one_dim':
                 m += c[i] * ((2 * i * dr) - ((i - 1) * 2 * dr)) * self.length * self.width
-
-        return m
+        return m * number_samples
 
     def converting_y(self, y):
         y_list = y
         return y_list
 
-
-    def time_iteration(self, T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr):
+    def time_iteration(self, T, P, c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, number_samples):
         global method_value
         method_value = 0  # костыль для определения и не вылетания объёма аппарата
         residence_time = volume / flowrate
@@ -356,25 +349,22 @@ class scd_apparatus():
         density_mix[0] = density_ips
 
         if self.key_sch == ('implicit' or 'explicit'):
-            mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width)
+            mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width, self.number_samples)
         elif self.key_sch == 'implicit modified':
-            mass_list[0] = self.fick_mass(c_matrix_changed[0], self.length, self.width)
+            mass_list[0] = self.fick_mass(c_matrix_changed[0], self.length, self.width, self.number_samples)
         c_app[0] = 0.
 
-        layout = [
-            [psg.ProgressBar(100, orientation='h', expand_x=True, size=(20, 20), key='-PBAR-'), psg.Button('Test')],
-            [psg.Text('', key='-OUT-', enable_events=True, font=('Arial Bold', 16), justification='center',
-                      expand_x=True)]]
+        layout = [[psg.ProgressBar(n_t, orientation='h', expand_x=True, size=(20, 20), key='-PROG-')], [psg.Text('', key='-OUT-', enable_events=True, font=('Arial Bold', 16), justification='center', expand_x=True)]]
         window = psg.Window('Progress Bar', layout, size=(715, 150))
-        event, values = window.read()
-        if event == 'Test':
-            window['Test'].update(disabled=True)
+
         for i in range(1, n_t):
             if i == 1:
                 y_boundary = 0
 
             y_bound = y_boundary
             c_bound = c_app[i - 1]
+
+            event, values = window.read(timeout = 1)
 
             if self.key_sch == ('implicit' or 'explicit'):
                 c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
@@ -389,20 +379,20 @@ class scd_apparatus():
             else:
                 if method_value != 5:
                     if self.key_sch == ('implicit' or 'explicit'):
-                        mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width)
+                        mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width, self.number_samples)
                     elif self.key_sch == 'implicit modified':
-                        mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width) #для новой модели
+                        mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width, self.number_samples) #для новой модели
 
-                    delta_mass = - self.number_samples * (mass_list[i] - mass_list[i - 1])
-
+                    #delta_mass = - self.number_samples * (mass_list[i] - mass_list[i - 1])
+                    delta_mass = - (mass_list[i] - mass_list[i - 1])
                     c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
 
                     y_boundary = c_app[i] / density_mix[i][-1]
 
-            window['-PBAR-'].update(current_count=i + 1)
-            window['-OUT-'].update(str(i + 1))
-            #time.sleep(0.0001)
-            window['Test'].update(disabled=False)
+            window['-PROG-'].update(current_count=i + 1)
+            window['-OUT-'].update(str(i + 1) + f'из {n_t} итераций')
+
+
         window.close()
         if self.key_sch == ('implicit' or 'explicit'):
             return c_matrix, mass_list, c_app
@@ -415,6 +405,7 @@ class scd_apparatus():
 
 def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_samples, value, key_sch, working, working_scheme):
     global n_t, R, dr, c_r, r, R, y_start
+    c_init = density_ips * porosity
     R = height / 2  # meters
     dr = R / num_steps  # шаг по радиусу meters
     n_t = int(proc_time / dt) + 1  # количество шагов с учетом нулевого шага
@@ -434,10 +425,10 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
 
 
     y_start = float(optimize.golden(object1.golden_method, maxiter=10000))  # массовая доля, кг/кгсм
-    density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = object1.density_co2_and_viscos(
-        T, P)
+    density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = object1.density_co2_and_viscos(T, P)
+    print('плотность Углекислого газа',density_co2, 'коэффициент диффузии', D_coef_ips_co2)
 
-    y_fick = [y_start] * (num_steps +2) # создаю список массовых долей и наполняю его начальным условиями
+    y_fick = [y_start] * (num_steps +2)     #создаю список массовых долей и наполняю его начальным условиями
     y_fick[-1] = 0
     y_fick_init = y_fick
 
@@ -464,6 +455,6 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     key_sch = ['explicit', 'implicit', 'implicit modified']
 
     matrix_of_c, list_of_mass, c_app = object1.time_iteration(T, P, c_init_list, c_changed_init, y_fick_init,
-                                                              D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr)
+                                                              D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, number_samples)
     print('sverka', sverka_method)
     return matrix_of_c, list_of_mass, c_app, time, i, r, method_value, sverka_method
