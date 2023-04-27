@@ -292,7 +292,7 @@ class scd_apparatus():
 
         for i in range(num_steps, 0, -1):
             y_fick_fin[i] = alfa_new[i] * y_fick_fin[i + 1] + beta_new[i]
-        print('y_fick', y_fick_fin)
+
         y_fick_fin[-1] = y_bound
         y_fick_fin[0] = y_fick_fin[1]
         print('y_fick', y_fick_fin)
