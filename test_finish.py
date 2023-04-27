@@ -20,8 +20,8 @@ pio.templates
 
 pid = os.getpid()
 hv.extension('plotly')
-# radio_group = pn.widgets.RadioButtonGroup(
-#     name='Radio Button Group', options=['Основные параметры', 'Дополнительные параметры'], button_type='success') #тут будет вкладка с параметрами
+
+
 radio_group = pn.widgets.Select(
     value='Основные параметры',
     options=['Основные параметры', 'Дополнительные параметры']
@@ -122,8 +122,10 @@ def visual(volume, height, length, width, type):
                         fill='blue', outline=None, width=3)
                 y0 = y0 + diam
 
+    path = os.path.join(r'C:\Users\danko\OneDrive\Рабочий стол\Diplom-python\Fick\Images', 'Version1.jpg')
+    im.save(path)
     im.show()
-
+    return im
 
 def onClose(event): # убивает процесс
     static_text.value = 'До новых встреч'
@@ -167,7 +169,6 @@ def show_time_process(list):
             break
         else:
             slovo = 'Время сушки недостаточно. Содержание спирта в образцах выше запланированного'
-
     return n, slovo
 
 def run(event):
@@ -180,7 +181,6 @@ def run(event):
     visual(float_volume.value, float_height.value, float_length.value, float_width.value, group_of_key.value)
     file = pd.DataFrame(list_of_mass)
     file.to_excel('Death.xlsx')
-
 
 
     n, slovo= show_time_process(list_of_mass)
