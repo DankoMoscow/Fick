@@ -15,6 +15,7 @@ import plotly.express as px
 from datetime import datetime
 import plotly.io as pio
 import PySimpleGUI as sg #библиотека для создания шкалы процесса
+from PIL import Image, ImageDraw
 pio.templates
 
 pid = os.getpid()
@@ -89,6 +90,41 @@ plot = hv.Curve([0]).opts(width=300)
 main_window = pn.Row(pn.Spacer(width=100), main_column, pn.Spacer(width=50), plot, sizing_mode='stretch_width') # общий виджет
 
 
+def visual(volume, height, length, width, type):
+    im = Image.new('RGB', (500, 500), (255, 255, 255))
+
+    '''это для квадрата'''
+    x0 = 50; y0 = 120; x1 = 350; y1 = 420
+    print('Объём', volume)
+    width_rect = 10
+
+    side = pow(volume,1/3)
+    print('Длина стороны реактора', side)
+    equal = side/height
+    print('Высота', height, 'отношение сторон',equal)
+    diam = int((x1 -x0)/equal)
+
+    """для дуги"""
+    x0_arc = 50; y0_arc = 100; x1_arc = 350; y1_arc = 150
+    width_arc = 10
+
+    draw = ImageDraw.Draw(im)
+    sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
+    draw.arc(xy=(x0_arc, y0_arc, x1_arc, y1_arc), start=180, end=360, fill='black', width=width_arc)
+
+    tests = ['test1']
+    if type == 'sphere':
+        for i in range(len(tests)):
+            for g in range(0, y1 - y0 - diam - width_rect, diam):
+                for k in range(0, x1 - x0 - diam, diam):
+                    i = draw.ellipse(
+                        xy=(x0 + width_rect + k, y0 + width_rect, x0 + width_rect + diam + k, y0 + width_rect + diam),
+                        fill='blue', outline=None, width=3)
+                y0 = y0 + diam
+
+    im.show()
+
+
 def onClose(event): # убивает процесс
     static_text.value = 'До новых встреч'
     panel.command.die('By')
@@ -141,7 +177,7 @@ def run(event):
     matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(temperature_select.value, pressure_select.value, float_width.value, float_length.value, float_height.value,
         float_volume.value, float_flowrate.value, float_dt.value, float_diff_coef.value, int_number_samples.value, group_of_key.value, group_of_ways.value, static_text.value,static_cond.value)
 
-
+    visual(float_volume.value, float_height.value, float_length.value, float_width.value, group_of_key.value)
     file = pd.DataFrame(list_of_mass)
     file.to_excel('Death.xlsx')
 

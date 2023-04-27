@@ -399,6 +399,7 @@ class scd_apparatus():
 
         elif self.key_sch == 'implicit modified':
             return c_matrix_changed, mass_list, c_app
+
     def ideal_mixing(self, c, c_inlet, residence_time, dt, volume, delta_mass):
         c_mixing = c + dt / residence_time * (c_inlet - c) + dt * delta_mass / volume
         print('c', c, 'c_mix', c_mixing, 'delta_mass', delta_mass)
