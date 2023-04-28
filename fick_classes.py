@@ -431,7 +431,7 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = object1.density_co2_and_viscos(T, P)
 
     y_fick = [y_start] * (num_steps +2)     #создаю список массовых долей и наполняю его начальным условиями
-    y_fick[-1] = 0
+    y_fick[-1] = y_start
     y_fick_init = y_fick
 
     V_ips = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)

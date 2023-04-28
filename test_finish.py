@@ -137,8 +137,8 @@ def visual(volume, height, length, width, type):
                 y0 = y0 + diam
 
 
-    path = os.path.join(r'C:\Users\danko\OneDrive\Рабочий стол\Diplom-python\Fick\Images', 'Version1.jpg')
-    im.save(path)
+    path = os.path.join(r'\Images', 'Version1.jpg')
+    im.save('Images\Version1.jpg')
     im.show()
     return im
 
