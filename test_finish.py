@@ -106,6 +106,7 @@ def visual(volume, height, length, width, type):
     print('Высота', height, 'отношение сторон',equal)
     diam = int((x1 -x0)/equal)
 
+
     """для дуги"""
     x0_arc = 50; y0_arc = 100; x1_arc = 350; y1_arc = 150
     width_arc = 10

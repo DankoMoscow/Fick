@@ -68,6 +68,7 @@ proc_time = 45*36
 c_bound = 0.
 
 
+
 class scd_apparatus():
     def __init__(self, T, P, volume, flowrate, width, length, height, diff_coef, key, key_sch, number_samples):
         self.width = width
