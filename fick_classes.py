@@ -64,7 +64,7 @@ img_path = os.path.join(file_path, 'Images')
 num_steps = 100  # количество шагов
 l = np.empty(num_steps + 2, dtype=np.int16)
 
-proc_time = 45*30
+proc_time = 45*36
 c_bound = 0.
 
 
