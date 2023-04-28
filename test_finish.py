@@ -16,6 +16,7 @@ from datetime import datetime
 import plotly.io as pio
 import PySimpleGUI as sg #библиотека для создания шкалы процесса
 from PIL import Image, ImageDraw
+from turtle import *
 pio.templates
 
 pid = os.getpid()
@@ -87,7 +88,8 @@ main_column = pn.WidgetBox('# Расчёт процесса сверхкрити
                           static_time_process, static_time_process_result,  button, button_exit)
 
 plot = hv.Curve([0]).opts(width=300)
-main_window = pn.Row(pn.Spacer(width=100), main_column, pn.Spacer(width=50), plot, sizing_mode='stretch_width') # общий виджет
+picture = None
+main_window = pn.Row(pn.Spacer(width=100), main_column, pn.Spacer(width=50), plot,pn.Spacer(width=50), picture, sizing_mode='stretch_width') # общий виджет
 
 
 def visual(volume, height, length, width, type):
@@ -112,15 +114,29 @@ def visual(volume, height, length, width, type):
     sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
     draw.arc(xy=(x0_arc, y0_arc, x1_arc, y1_arc), start=180, end=360, fill='black', width=width_arc)
 
-    tests = ['test1']
+    tests = ['test1', 'test2']
     if type == 'sphere':
         for i in range(len(tests)):
-            for g in range(0, y1 - y0 - diam - width_rect, diam):
-                for k in range(0, x1 - x0 - diam, diam):
+            for g in range(0, y1 - y0 - diam - 2* width_rect , diam):
+                for k in range(0, x1 - x0 - diam - 2* width_rect, diam):
+                    i = draw.ellipse(xy=(x0 + width_rect + k, y0 + width_rect, x0 + width_rect + diam + k, y0 + width_rect + diam),
+                        fill='blue', outline=None, width=3)
+
+                y0 = y0 + diam
+    if type == 'cyl':
+        for i in range(len(tests)):
+            for g in range(0, y1 - y0 - diam - 2* width_rect , diam):
+                for k in range(0, x1 - x0 - diam - 2* width_rect, diam):
                     i = draw.ellipse(
                         xy=(x0 + width_rect + k, y0 + width_rect, x0 + width_rect + diam + k, y0 + width_rect + diam),
                         fill='blue', outline=None, width=3)
+                    i = draw.line(xy=(x0 + width_rect + k + diam/2, y0 + width_rect , x0 + width_rect + k + diam/2 + 20, y0 + width_rect), fill = 'black')
+                    i = draw.line(xy=(x0 + width_rect + k + diam / 2, y0 + width_rect + diam, x0 + width_rect + k + diam / 2 + 20,y0 + width_rect +diam), fill='black')
+                    i = draw.arc(xy=(x0 + width_rect + k + diam/2 + 20, y0 + width_rect, x0 + width_rect + k + diam/2 + 20 + 20, y0 + width_rect +diam), start=270, end=90, fill='red', width=3)
                 y0 = y0 + diam
+
+
+
 
     path = os.path.join(r'C:\Users\danko\OneDrive\Рабочий стол\Diplom-python\Fick\Images', 'Version1.jpg')
     im.save(path)
@@ -178,10 +194,10 @@ def run(event):
     matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(temperature_select.value, pressure_select.value, float_width.value, float_length.value, float_height.value,
         float_volume.value, float_flowrate.value, float_dt.value, float_diff_coef.value, int_number_samples.value, group_of_key.value, group_of_ways.value, static_text.value,static_cond.value)
 
-    visual(float_volume.value, float_height.value, float_length.value, float_width.value, group_of_key.value)
-    file = pd.DataFrame(list_of_mass)
-    file.to_excel('Death.xlsx')
+    im = visual(float_volume.value, float_height.value, float_length.value, float_width.value, group_of_key.value)
 
+    # file_excel = pd.DataFrame(list_of_mass)
+    # file_excel.to_excel('Ver1.xlsx')
 
     n, slovo= show_time_process(list_of_mass)
 
@@ -222,7 +238,8 @@ def run(event):
     main_window[1] = main_column
     main_window[2] = pn.Spacer (width = 10)
     main_window[3] = main_plots
-
+    main_window[4] = pn.Spacer(width=10)
+    main_window[5] = im
 
     variable_time = static_time_process.value
     hhh =  save_time(variable_time)
