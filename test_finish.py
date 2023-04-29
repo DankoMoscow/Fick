@@ -25,8 +25,7 @@ hv.extension('plotly')
 
 radio_group = pn.widgets.Select(
     value='Основные параметры',
-    options=['Основные параметры', 'Дополнительные параметры']
-)
+    options=['Основные параметры', 'Дополнительные параметры'])
 
 float_width = pn.widgets.FloatSlider(name='Ширина образцов', start=0.01, end=0.1, step=0.01, value=0.01,
                                      format=PrintfTickFormatter(format='%.2f м'))
@@ -71,6 +70,7 @@ static_time_process_result = pn.widgets.StaticText(name='Итог сушки', v
 
 
 button = pn.widgets.Button(name='Нажмите для запуска расчёта', button_type='primary')
+button_picture = pn.widgets.Button(name='Нажмите для отображения реактора', button_type='primary')
 button_exit = pn.widgets.Button(name='Нажмите для выхода', button_type='primary')
 
 
@@ -85,15 +85,16 @@ dop_column = pn.Column(pressure_select, temperature_select)
 
 main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main, dop_column,
                           static_text, static_cond, static_time,
-                          static_time_process, static_time_process_result,  button, button_exit)
+                          static_time_process, static_time_process_result,  button,button_picture, button_exit)
 
 plot = hv.Curve([0]).opts(width=300)
 picture = None
 main_window = pn.Row(pn.Spacer(width=100), main_column, pn.Spacer(width=50), plot,pn.Spacer(width=50), picture, sizing_mode='stretch_width') # общий виджет
 
-
-def visual(volume, height, length, width, type):
+def visual(volume, height, length, width, type_pic, number_samples_pic):
     im = Image.new('RGB', (500, 500), (255, 255, 255))
+
+    print('Тип переменной', type(number_samples_pic))
 
     '''это для квадрата'''
     x0 = 50; y0 = 120; x1 = 350; y1 = 420
@@ -102,10 +103,14 @@ def visual(volume, height, length, width, type):
 
     side = pow(volume,1/3)
     print('Длина стороны реактора', side)
-    equal = side/height
-    print('Высота', height, 'отношение сторон',equal)
-    diam = int((x1 -x0)/equal)
+    equal_hei = side/height
+    equal_len = side/length
+    equal_wid = side/width
 
+    diam = int((x1 -x0)/equal_hei)
+    height_next = int((y1-y0)/equal_hei)
+    length_side = int((x1 -x0)/equal_len)
+    width_side= int((x1 -x0)/equal_wid)
 
     """для дуги"""
     x0_arc = 50; y0_arc = 100; x1_arc = 350; y1_arc = 150
@@ -115,28 +120,67 @@ def visual(volume, height, length, width, type):
     sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
     draw.arc(xy=(x0_arc, y0_arc, x1_arc, y1_arc), start=180, end=360, fill='black', width=width_arc)
 
-    tests = ['test1', 'test2']
-    if type == 'sphere':
+    tests = ['test1']
+    if type_pic == 'sphere':
         for i in range(len(tests)):
-            for g in range(0, y1 - y0 - diam - 2* width_rect , diam):
-                for k in range(0, x1 - x0 - diam - 2* width_rect, diam):
-                    i = draw.ellipse(xy=(x0 + width_rect + k, y0 + width_rect, x0 + width_rect + diam + k, y0 + width_rect + diam),
-                        fill='blue', outline=None, width=3)
-
+            m = 0
+            for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
+                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
+                    i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
+                    print('Количество образцов в аппарате', m , 'Общее число', number_samples_pic)
+                    if m > number_samples_pic:
+                        break
+                    m +=1
+                if m > number_samples_pic:
+                    break
                 y0 = y0 + diam
-    if type == 'cyl':
+            if m > number_samples_pic:
+                break
+
+
+    if type_pic == 'cyl':
         for i in range(len(tests)):
-            for g in range(0, y1 - y0 - diam - 2* width_rect , diam):
-                for k in range(0, x1 - x0 - diam - 2* width_rect, diam):
-                    i = draw.ellipse(
-                        xy=(x0 + width_rect + k, y0 + width_rect, x0 + width_rect + diam + k, y0 + width_rect + diam),
-                        fill='blue', outline=None, width=3)
-                    i = draw.line(xy=(x0 + width_rect + k + diam/2, y0 + width_rect , x0 + width_rect + k + diam/2 + 20, y0 + width_rect), fill = 'black')
-                    i = draw.line(xy=(x0 + width_rect + k + diam / 2, y0 + width_rect + diam, x0 + width_rect + k + diam / 2 + 20,y0 + width_rect +diam), fill='black')
-                    i = draw.arc(xy=(x0 + width_rect + k + diam/2 + 20, y0 + width_rect, x0 + width_rect + k + diam/2 + 20 + 20, y0 + width_rect +diam), start=270, end=90, fill='red', width=3)
+            m = 0
+            for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
+                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
+                    if (x1 - x0 - k) < (diam + length_side):
+                        break
+                    i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam/2 + k, y1  - width_rect  - g), fill=(178,34,34), outline='black', width=3)
+                    i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
+                    i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
+                    i = draw.arc(xy=(x0 + width_rect + k + diam/2 + length_side - diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side + diam/4, y1  - width_rect  - g), start=270, end=90, fill='red', width=1)
+                    print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
+                    if m > number_samples_pic:
+                        break
+                    m += 1
+                if m > number_samples_pic:
+                    break
                 y0 = y0 + diam
+            if m > number_samples_pic:
+                break
 
+    if type_pic == 'one_dim':
+        for i in range(len(tests)):
+            m = 0
+            for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
+                if (y0 - g -  width_rect) < (diam + width_side/2):
+                    break
+                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
+                    if (x1 - x0 - k - 2 * width_rect) < (width_side/2 + length_side):
+                        break
+                    i = draw.rectangle(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + k + length_side, y1  - width_rect  - g), fill=(178,34,34), outline=(0, 0, 0), width=1)
+                    i = draw.polygon(xy=[ (x0 + width_rect + k, y1  - width_rect - g - diam), (x0 + width_rect + k + width_side/2, y1  - width_rect - g - diam - diam/3), (x0 + width_rect + k + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side, y1  - width_rect  - g), (x0 + width_rect + k + length_side, y1  - width_rect - g - diam), (x0 + width_rect + k + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + length_side + width_side/2, y1  - width_rect  - g - diam/3)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
 
+                    print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
+                    if m > number_samples_pic:
+                        break
+                    m += 1
+                if m > number_samples_pic:
+                    break
+                y0 = y0 + diam
+            if m > number_samples_pic:
+                break
     path = os.path.join(r'\Images', 'Version1.jpg')
     im.save('Images\Version1.jpg')
     im.show()
@@ -186,14 +230,18 @@ def show_time_process(list):
             slovo = 'Время сушки недостаточно. Содержание спирта в образцах выше запланированного'
     return n, slovo
 
+def visual_pic(event):
+    im = visual(float_volume.value, float_height.value, float_length.value, float_width.value, group_of_key.value, int_number_samples.value)
+    main_window[4] = pn.Spacer(width=10)
+    main_window[5] = im
+
+
 def run(event):
     start_time = datetime.now()
     global main_window, float_width, float_dt, float_length, float_diff_coef, int_number_samples, podskazka, delta_time, cond_scheme, temperature_select, pressure_select
-
+    print('Тип переменной', type(int_number_samples.value))
     matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(temperature_select.value, pressure_select.value, float_width.value, float_length.value, float_height.value,
         float_volume.value, float_flowrate.value, float_dt.value, float_diff_coef.value, int_number_samples.value, group_of_key.value, group_of_ways.value, static_text.value,static_cond.value)
-
-    im = visual(float_volume.value, float_height.value, float_length.value, float_width.value, group_of_key.value)
 
     # file_excel = pd.DataFrame(list_of_mass)
     # file_excel.to_excel('Ver1.xlsx')
@@ -237,8 +285,7 @@ def run(event):
     main_window[1] = main_column
     main_window[2] = pn.Spacer (width = 10)
     main_window[3] = main_plots
-    main_window[4] = pn.Spacer(width=10)
-    main_window[5] = im
+
 
     variable_time = static_time_process.value
     hhh =  save_time(variable_time)
@@ -249,6 +296,7 @@ def run(event):
 
 def main():
     button.on_click(run)
+    button_picture.on_click(visual_pic)
     button_exit.on_click(onClose)
     main_window.show()
 
