@@ -94,8 +94,6 @@ main_window = pn.Row(pn.Spacer(width=100), main_column, pn.Spacer(width=50), plo
 def visual(volume, height, length, width, type_pic, number_samples_pic):
     im = Image.new('RGB', (500, 500), (255, 255, 255))
 
-    print('Тип переменной', type(number_samples_pic))
-
     '''это для квадрата'''
     x0 = 50; y0 = 120; x1 = 350; y1 = 420
     print('Объём', volume)
@@ -126,6 +124,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
 
     draw.line(xy = (x1 + 8, y1    , x1 + 8 , y0_arc + 25 ), fill = 'black', width=7)  #линия боковой грани
     tests = ['test1']
+
     if type_pic == 'sphere':
         for i in range(len(tests)):
             m = 0
@@ -133,6 +132,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
                     i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect -  g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=45, end=135, fill='black', width=1)
                     i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
+                    i = draw.pieslice(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=3) #это эффект блика
 
                     print('Количество образцов в аппарате', m , 'Общее число', number_samples_pic)
                     if m > number_samples_pic:
@@ -144,7 +144,6 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
             if m > number_samples_pic:
                 break
 
-
     if type_pic == 'cyl':
         for i in range(len(tests)):
             m = 0
@@ -152,11 +151,13 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
                     if (x1 - x0 - k) < (2*diam + length_side):
                         break
+                    # TODO вместо линий использовать прямоугольник со скруглёнными углами
                     i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
                     i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
                     i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
-                    i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=3)
-                    # TODO вместо линий использовать прямоугольник со скруглёнными углами
+                    i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
+                    i = draw.pieslice(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=1)
+
                     #i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + width_side/2, y1  - width_rect - g - diam - diam/3), (x0 + width_rect + k + diam/4 + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
 
                     print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
@@ -173,16 +174,16 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
         for i in range(len(tests)):
             m = 0
             for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
-                if (y0 - g -  width_rect) < (diam + width_side/2):
+                if (y0 - g -  width_rect) < (diam + width_side):
                     break
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
-                    if (x1 - x0 - k - 2 * width_rect) < (width_side/2 + length_side):
+                    if (x1 - x0 - k - 2 * width_rect) < (width_side + length_side):
                         break
-                    i = draw.polygon(xy=((x0 + width_rect + k, y1  - width_rect - g - diam) , (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5), (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5), (x0 + width_rect + k, y1  - width_rect  - g)), fill=(178,34,34), outline=(0, 0, 0), width=1)
+                    i = draw.polygon(xy=((x0 + width_rect + k, y1  - width_rect - g - diam    + 2* k/(diam + length_side)) , (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5   + 2* k/(diam + length_side)), (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5   + 2* k/(diam + length_side)), (x0 + width_rect + k, y1  - width_rect  - g   + 2* k/(diam + length_side))), fill=(178,34,34), outline=(0, 0, 0), width=1)
+                    # 2* k/(diam + length_side - это коэффициент опускания монолитов
 
-                    # TODO добавить эффект опускания блоков
-                    i = draw.polygon(xy=[ (x0 + width_rect + k, y1  - width_rect - g - diam), (x0 + width_rect + k + 2* width_side, y1  - width_rect - g - diam - diam/2 + 5), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5),(x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
-                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5), (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5),(x0 + width_rect + k + length_side + 2* width_side, y1  - width_rect  - g - diam/2 + 5)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
+                    i = draw.polygon(xy=[ (x0 + width_rect + k, y1  - width_rect - g - diam + 2 * k/(diam + length_side)), (x0 + width_rect + k + 2* width_side, y1  - width_rect - g - diam - diam/2 + 5 + 2* k/(diam + length_side)), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5 + 2* k/(diam + length_side)),(x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5 + 2* k/(diam + length_side))], fill = (200,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5 + 2* k/(diam + length_side)), (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5 + 2* k/(diam + length_side)), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5 + 2* k/(diam + length_side)),(x0 + width_rect + k + length_side + 2* width_side, y1  - width_rect  - g - diam/2 + 5 + 2* k/(diam + length_side))], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
 
                     print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
                     if m > number_samples_pic:
@@ -193,6 +194,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                 y0 = y0 + diam
             if m > number_samples_pic:
                 break
+
     path = os.path.join(r'\Images', 'Version1.jpg')
     im.save('Images\Version1.jpg')
     im.show()
