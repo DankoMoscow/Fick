@@ -114,19 +114,26 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
 
     """для дуги"""
     x0_arc = 50; y0_arc = 100; x1_arc = 350; y1_arc = 150
-    width_arc = 10
+    width_arc = 8
 
     draw = ImageDraw.Draw(im)
-    sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
-    draw.arc(xy=(x0_arc, y0_arc, x1_arc, y1_arc), start=180, end=360, fill='black', width=width_arc)
+    #sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
+    draw.polygon(xy = ((x0, y0), (x1, y0 + 10), (x1, y1 +10), (x0, y1)), fill='white', outline=(0, 0, 0), width=width_arc)
+    draw.arc(xy=(x0_arc , y0_arc, x1_arc +12, y1_arc), start=180, end=360, fill='black', width=width_arc) #дуга верха
 
+    draw.arc(xy = (x1-10, y0 -2 , x1 + 10, y0 + 16), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой нижней стороны
+    draw.arc(xy = (x1-10, y1 - 9, x1 + 10, y1 + 9), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой верхней стороны
+
+    draw.line(xy = (x1 + 8, y1    , x1 + 8 , y0_arc + 25 ), fill = 'black', width=7)  #линия боковой грани
     tests = ['test1']
     if type_pic == 'sphere':
         for i in range(len(tests)):
             m = 0
             for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
+                    i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect -  g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=45, end=135, fill='black', width=1)
                     i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
+
                     print('Количество образцов в аппарате', m , 'Общее число', number_samples_pic)
                     if m > number_samples_pic:
                         break
@@ -143,12 +150,15 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
             m = 0
             for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
-                    if (x1 - x0 - k) < (diam + length_side):
+                    if (x1 - x0 - k) < (2*diam + length_side):
                         break
-                    i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam/2 + k, y1  - width_rect  - g), fill=(178,34,34), outline='black', width=3)
                     i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
                     i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
-                    i = draw.arc(xy=(x0 + width_rect + k + diam/2 + length_side - diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side + diam/4, y1  - width_rect  - g), start=270, end=90, fill='red', width=1)
+                    i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
+                    i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=3)
+                    # TODO вместо линий использовать прямоугольник со скруглёнными углами
+                    #i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + width_side/2, y1  - width_rect - g - diam - diam/3), (x0 + width_rect + k + diam/4 + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+
                     print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
                     if m > number_samples_pic:
                         break
@@ -168,9 +178,11 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
                     if (x1 - x0 - k - 2 * width_rect) < (width_side/2 + length_side):
                         break
-                    i = draw.rectangle(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + k + length_side, y1  - width_rect  - g), fill=(178,34,34), outline=(0, 0, 0), width=1)
-                    i = draw.polygon(xy=[ (x0 + width_rect + k, y1  - width_rect - g - diam), (x0 + width_rect + k + width_side/2, y1  - width_rect - g - diam - diam/3), (x0 + width_rect + k + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
-                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side, y1  - width_rect  - g), (x0 + width_rect + k + length_side, y1  - width_rect - g - diam), (x0 + width_rect + k + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + length_side + width_side/2, y1  - width_rect  - g - diam/3)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
+                    i = draw.polygon(xy=((x0 + width_rect + k, y1  - width_rect - g - diam) , (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5), (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5), (x0 + width_rect + k, y1  - width_rect  - g)), fill=(178,34,34), outline=(0, 0, 0), width=1)
+
+                    # TODO добавить эффект опускания блоков
+                    i = draw.polygon(xy=[ (x0 + width_rect + k, y1  - width_rect - g - diam), (x0 + width_rect + k + 2* width_side, y1  - width_rect - g - diam - diam/2 + 5), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5),(x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5), (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5),(x0 + width_rect + k + length_side + 2* width_side, y1  - width_rect  - g - diam/2 + 5)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
 
                     print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
                     if m > number_samples_pic:

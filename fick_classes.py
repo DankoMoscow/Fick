@@ -64,7 +64,7 @@ img_path = os.path.join(file_path, 'Images')
 num_steps = 100  # количество шагов
 l = np.empty(num_steps + 2, dtype=np.int16)
 
-proc_time = 45*36
+proc_time = 45*3600
 c_bound = 0.
 
 
@@ -348,6 +348,7 @@ class scd_apparatus():
         c_matrix_changed[0] = c_changed_init
         y_fick_changed[0] = y_fick_init
         density_mix[0] = density_ips
+
         V_ips[0] = V_init_list#TODO доделать returnom из main. Сделать пересчёт на массу, а не концентрауию
         if self.key_sch == ('implicit' or 'explicit'):
             mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width, self.number_samples)
@@ -394,7 +395,6 @@ class scd_apparatus():
                     print('Концентрация в аппарате',c_app[i] ,'Граница', y_boundary,  'плотность', density_mix[i][-1])
             window['-PROG-'].update(current_count=i + 1)
             window['-OUT-'].update(str(i + 1) + f'из {n_t} итераций')
-
 
         window.close()
         if self.key_sch == ('implicit' or 'explicit'):
@@ -448,11 +448,16 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
 
 
     c_changed_init = np.zeros(num_steps + 2)
+    # for i in range(num_steps + 2):
+    #     c_changed_init[i] = density_ips * y_start
+    #     if i == num_steps + 1:
+    #         #c_changed_init[i] = 0
+    #         c_changed_init[i] = density_ips * y_start
     for i in range(num_steps + 2):
-        c_changed_init[i] = density_ips * y_start
+        c_changed_init[i] = density_ips * V_ips[i]
         if i == num_steps + 1:
-            #c_changed_init[i] = 0
-            c_changed_init[i] = density_ips * y_start
+
+            c_changed_init[i] = density_ips * V_ips[i]
 
     print('n_t:', n_t, 'proc_time:', proc_time, 'variable of item',value)
     time = np.linspace(0, proc_time, n_t)
