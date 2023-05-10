@@ -152,13 +152,17 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                     if (x1 - x0 - k) < (2*diam + length_side):
                         break
                     # TODO вместо линий использовать прямоугольник со скруглёнными углами
+                    diam_rounded_rect = (y1  - width_rect  - g) - (y1  - width_rect - g - diam)
+                    print('diam', diam_rounded_rect)
+                    #i = draw.rounded_rectangle(xy = [(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g)],   corners = [True, False, False, False] , radius=  diam_rounded_rect/2, outline='black', fill = None, width = 1)
+                    i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + width_side/2, y1  - width_rect - g - diam - diam/3), (x0 + width_rect + k + diam/4 + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+
+
                     i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
                     i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
                     i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
                     i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
-                    i = draw.pieslice(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=1)
-
-                    #i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + width_side/2, y1  - width_rect - g - diam - diam/3), (x0 + width_rect + k + diam/4 + width_side/2 + length_side, y1  - width_rect - g - diam - diam/3),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+                    #i = draw.pieslice(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=1)
 
                     print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
                     if m > number_samples_pic:
