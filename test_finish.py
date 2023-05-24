@@ -95,12 +95,11 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     im = Image.new('RGB', (500, 500), (255, 255, 255))
 
     '''это для квадрата'''
-    x0 = 50; y0 = 120; x1 = 350; y1 = 420
-    print('Объём', volume)
-    width_rect = 10
+    x0 = 50; y0 = 20; x1 = 450; y1 = 420
+    width_rect = 5
 
     side = pow(volume,1/3)
-    print('Длина стороны реактора', side)
+
     equal_hei = side/height
     equal_len = side/length
     equal_wid = side/width
@@ -111,18 +110,19 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     width_side= int((x1 -x0)/equal_wid)
 
     """для дуги"""
-    x0_arc = 50; y0_arc = 100; x1_arc = 350; y1_arc = 150
-    width_arc = 8
+    x0_arc = 50; y0_arc = 10; x1_arc = 450; y1_arc = 40 #TODO тут подобрать нужное число
+    width_arc = 5
 
     draw = ImageDraw.Draw(im)
     #sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
     draw.polygon(xy = ((x0, y0), (x1, y0 + 10), (x1, y1 +10), (x0, y1)), fill='white', outline=(0, 0, 0), width=width_arc)
+
     draw.arc(xy=(x0_arc , y0_arc, x1_arc +12, y1_arc), start=180, end=360, fill='black', width=width_arc) #дуга верха
 
-    draw.arc(xy = (x1-10, y0 -2 , x1 + 10, y0 + 16), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой нижней стороны
-    draw.arc(xy = (x1-10, y1 - 9, x1 + 10, y1 + 9), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой верхней стороны
+    draw.arc(xy = (x1-10, y0 -2 , x1 + 10, y0 + 12), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой верхней стороны
+    draw.arc(xy = (x1-10, y1 - 7, x1 + 10, y1 + 7), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой нижней стороны
 
-    draw.line(xy = (x1 + 8, y1    , x1 + 8 , y0_arc + 25 ), fill = 'black', width=7)  #линия боковой грани
+    draw.line(xy = (x1 + 8, y1 +5, x1 + 8 , y0 + 5 ), fill = 'black', width=5)  #линия боковой грани
     tests = ['test1']
 
     if type_pic == 'sphere':
@@ -147,21 +147,20 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     if type_pic == 'cyl':
         for i in range(len(tests)):
             m = 0
-            for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
-                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
-                    if (x1 - x0 - k) < (2*diam + length_side):
-                        break
-                    # TODO работать только с высотой и длиной, но не шириной, следовательно исключить width_side
-                    diam_rounded_rect = (y1  - width_rect  - g) - (y1  - width_rect - g - diam)
-                    print('diam', diam_rounded_rect)
-                    i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + height_next/2, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + diam/1.75 + length_side, y1  - width_rect - g - diam - height_next/7),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+            for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect, diam + int(height_next/7)):
 
+                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
+                    if (x1 - x0 - k) < (diam + length_side):
+                        break
+                    diam_rounded_rect = (y1  - width_rect  - g) - (y1  - width_rect - g - diam)
+                    i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + height_next/2, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + diam/1.75 + length_side, y1  - width_rect - g - diam - height_next/7),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+                    draw.arc(xy = [(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + diam/4 + height_next/2, y1  - width_rect - g - diam)], start= 135, end = 270, fill = 'black', width=1) #левое закручивание
+                    draw.arc(xy = [(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + length_side + 3* diam/4, y1  - width_rect - g - diam/2)], start= 270, end = 360, fill = 'black', width=1) #правое закручивание
 
                     i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
                     i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
                     i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
                     i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
-                    #i = draw.pieslice(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=1)
 
                     print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
                     if m > number_samples_pic:
@@ -173,22 +172,33 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
             if m > number_samples_pic:
                 break
 
+    # TODO правильное отображение количества образцов и заполняемость танка
     if type_pic == 'one_dim':
         for i in range(len(tests)):
             m = 0
             for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
-                if (y0 - g -  width_rect) < (diam + width_side):
+                if (y0 - g -  width_rect) < (diam + width_side + 5):
                     break
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
-                    if (x1 - x0 - k - 2 * width_rect) < (width_side + length_side):
+                    if (x1 - x0 - k - 2 * width_rect) < (2* width_side + length_side + 5):
                         break
-                    i = draw.polygon(xy=((x0 + width_rect + k, y1  - width_rect - g - diam    + 2* k/(diam + length_side)) , (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5   + 2* k/(diam + length_side)), (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5   + 2* k/(diam + length_side)), (x0 + width_rect + k, y1  - width_rect  - g   + 2* k/(diam + length_side))), fill=(178,34,34), outline=(0, 0, 0), width=1)
-                    # 2* k/(diam + length_side - это коэффициент опускания монолитов
+                    coef_down = 2* k/(diam + length_side) #это коэффициент опускания монолитов
+                    i = draw.polygon(xy=((x0 + width_rect + k + 5, y1  - width_rect - g - diam    + coef_down) ,
+                                         (x0 + width_rect + k + length_side + 5, y1  - width_rect - g - diam +5   + coef_down),
+                                         (x0 + width_rect + k + length_side + 5, y1  - width_rect  - g + 5   + coef_down),
+                                         (x0 + width_rect + k + 5, y1  - width_rect  - g   + coef_down)), fill=(178,34,34), outline=(0, 0, 0), width=1) #это основной прямоугольник
 
-                    i = draw.polygon(xy=[ (x0 + width_rect + k, y1  - width_rect - g - diam + 2 * k/(diam + length_side)), (x0 + width_rect + k + 2* width_side, y1  - width_rect - g - diam - diam/2 + 5 + 2* k/(diam + length_side)), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5 + 2* k/(diam + length_side)),(x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5 + 2* k/(diam + length_side))], fill = (200,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
-                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side, y1  - width_rect  - g + 5 + 2* k/(diam + length_side)), (x0 + width_rect + k + length_side, y1  - width_rect - g - diam +5 + 2* k/(diam + length_side)), (x0 + width_rect + k + 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 7.5 + 2* k/(diam + length_side)),(x0 + width_rect + k + length_side + 2* width_side, y1  - width_rect  - g - diam/2 + 5 + 2* k/(diam + length_side))], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
 
-                    print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
+                    i = draw.polygon(xy=[ (x0 + width_rect + k+5, y1  - width_rect - g - diam +  coef_down),
+                                          (x0 + width_rect + k +5+ 2* width_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
+                                          (x0 + width_rect + k +5+ 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
+                                          (x0 + width_rect + k +5+ length_side, y1  - width_rect - g - diam +5 + coef_down)], fill = (200,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+
+                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side+5, y1  - width_rect  - g + 5 + coef_down),
+                                          (x0 + width_rect + k + length_side+5, y1  - width_rect - g - diam +5 + coef_down),
+                                          (x0 + width_rect + k + 2* width_side + length_side+5, y1  - width_rect - g - diam - diam/2 + 7.5 + coef_down),
+                                          (x0 + width_rect + k + length_side + 2* width_side+5, y1  - width_rect  - g - diam/2 + 5 + coef_down)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
+
                     if m > number_samples_pic:
                         break
                     m += 1
@@ -197,10 +207,10 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                 y0 = y0 + diam
             if m > number_samples_pic:
                 break
-
+    print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
     path = os.path.join(r'\Images', 'Version1.jpg')
     im.save('Images\Version1.jpg')
-    im.show()
+    #im.show()
     return im
 
 def onClose(event): # убивает процесс
@@ -256,7 +266,6 @@ def visual_pic(event):
 def run(event):
     start_time = datetime.now()
     global main_window, float_width, float_dt, float_length, float_diff_coef, int_number_samples, podskazka, delta_time, cond_scheme, temperature_select, pressure_select
-    print('Тип переменной', type(int_number_samples.value))
     matrix_of_c, list_of_mass, c_app, time, i, r_list, podskazka, cond_scheme = fick_classes.main(temperature_select.value, pressure_select.value, float_width.value, float_length.value, float_height.value,
         float_volume.value, float_flowrate.value, float_dt.value, float_diff_coef.value, int_number_samples.value, group_of_key.value, group_of_ways.value, static_text.value,static_cond.value)
 
