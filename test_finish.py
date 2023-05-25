@@ -1,3 +1,4 @@
+import math
 import panel as pn
 import holoviews as hv
 import panel.command
@@ -6,6 +7,7 @@ import fick_classes
 import pandas as pd
 import openpyxl
 import os, sys
+import numpy as np
 import plotly.graph_objs as go
 from mpl_toolkits.mplot3d import Axes3D
 from bokeh.models.formatters import PrintfTickFormatter
@@ -61,7 +63,7 @@ groups = pn.Row(group_of_key, group_of_ways)
 
 groups_main = pn.Column(float_width, float_length, float_height, float_volume, float_flowrate, float_dt, float_diff_coef, int_number_samples, groups)
 
-
+static_occupancy = pn.widgets.StaticText(name='Заполненность аппарата', value=' ')
 static_cond = pn.widgets.StaticText(name='Условие устойчивости', value=' ')
 static_text = pn.widgets.StaticText(name='Поле для вывода ошибок', value=' ')
 static_time = pn.widgets.StaticText(name='Время расчёта', value=' ')
@@ -83,7 +85,7 @@ dop_column = pn.Column(pressure_select, temperature_select)
 
 #виджеты для отображения
 
-main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main, dop_column,
+main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main, dop_column, static_occupancy,
                           static_text, static_cond, static_time,
                           static_time_process, static_time_process_result,  button,button_picture, button_exit)
 
@@ -110,11 +112,11 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     width_side= int((x1 -x0)/equal_wid)
 
     """для дуги"""
-    x0_arc = 50; y0_arc = 10; x1_arc = 450; y1_arc = 40 #TODO тут подобрать нужное число
+    x0_arc = 50; y0_arc = 10; x1_arc = 450; y1_arc = 40
     width_arc = 5
 
     draw = ImageDraw.Draw(im)
-    #sq = draw.rectangle(xy=(x0, y0, x1, y1), fill='white', outline=(0, 0, 0), width=width_rect)
+
     draw.polygon(xy = ((x0, y0), (x1, y0 + 10), (x1, y1 +10), (x0, y1)), fill='white', outline=(0, 0, 0), width=width_arc)
 
     draw.arc(xy=(x0_arc , y0_arc, x1_arc +12, y1_arc), start=180, end=360, fill='black', width=width_arc) #дуга верха
@@ -125,93 +127,121 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     draw.line(xy = (x1 + 8, y1 +5, x1 + 8 , y0 + 5 ), fill = 'black', width=5)  #линия боковой грани
     tests = ['test1']
 
+    width_num = math.floor(side / width)
+    print('Количество вглубь', width_num)
+
+    m = 0
+    num_fin = 0
+    Volume_all = 0
+    Volume_all_fin = Volume_all * 0.7 #условие заполняемости аппарата
     if type_pic == 'sphere':
         for i in range(len(tests)):
-            m = 0
             for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
                     i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect -  g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=45, end=135, fill='black', width=1)
                     i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
                     i = draw.pieslice(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=3) #это эффект блика
 
-                    print('Количество образцов в аппарате', m , 'Общее число', number_samples_pic)
-                    if m > number_samples_pic:
+                    if (num_fin > number_samples_pic or Volume_all_fin > volume):
                         break
-                    m +=1
-                if m > number_samples_pic:
+                    m += 1
+                    Volume_all = m * volume_samp(length, width, height, type_pic)
+                if (num_fin > number_samples_pic or Volume_all_fin > volume):
                     break
                 y0 = y0 + diam
-            if m > number_samples_pic:
+                num_fin = m * width_num
+                Volume_all = num_fin * volume_samp(length, width, height, type_pic)
+                print('Vol', Volume_all_fin)
+            if (num_fin > number_samples_pic or Volume_all_fin > volume):
                 break
 
     if type_pic == 'cyl':
         for i in range(len(tests)):
-            m = 0
-            for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect, diam + int(height_next/7)):
-
+            for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
                     if (x1 - x0 - k) < (diam + length_side):
                         break
                     diam_rounded_rect = (y1  - width_rect  - g) - (y1  - width_rect - g - diam)
-                    i = draw.polygon(xy=[ (x0 + width_rect + k + diam/4, y1  - width_rect - g - diam), (x0 + width_rect + k + diam/4 + height_next/2, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + diam/1.75 + length_side, y1  - width_rect - g - diam - height_next/7),(x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam)], fill = (178,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
-                    draw.arc(xy = [(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + diam/4 + height_next/2, y1  - width_rect - g - diam)], start= 135, end = 270, fill = 'black', width=1) #левое закручивание
-                    draw.arc(xy = [(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam - height_next/7), (x0 + width_rect + k + length_side + 3* diam/4, y1  - width_rect - g - diam/2)], start= 270, end = 360, fill = 'black', width=1) #правое закручивание
 
                     i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
                     i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
                     i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
                     i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
 
-                    print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
-                    if m > number_samples_pic:
+                    if (num_fin > number_samples_pic or Volume_all_fin > volume):
                         break
                     m += 1
-                if m > number_samples_pic:
+                    Volume_all = m * volume_samp(length, width, height, type_pic)
+                if (num_fin > number_samples_pic or Volume_all_fin > volume):
                     break
                 y0 = y0 + diam
-            if m > number_samples_pic:
+                num_fin = m * width_num
+                Volume_all = num_fin * volume_samp(length, width, height, type_pic)
+                print('Vol', Volume_all_fin)
+            if (num_fin > number_samples_pic or Volume_all_fin > volume):
                 break
 
-    # TODO правильное отображение количества образцов и заполняемость танка
+
     if type_pic == 'one_dim':
         for i in range(len(tests)):
-            m = 0
-            for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
-                if (y0 - g -  width_rect) < (diam + width_side + 5):
-                    break
-                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
-                    if (x1 - x0 - k - 2 * width_rect) < (2* width_side + length_side + 5):
+            while number_samples_pic >= num_fin:
+                for g in range(0, y1 - y0 - diam - 2 * width_rect -15, diam):
+                    for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
+                        if (x1 - x0 - k - 2 * width_rect) < (2* width_side + length_side + 5):
+                            break
+
+                        coef_down = 2* k/(diam + length_side) #это коэффициент опускания монолитов
+
+                        i = draw.polygon(xy=((x0 + width_rect + k + 5, y1  - width_rect - g - diam    + coef_down) ,
+                                             (x0 + width_rect + k + length_side + 5, y1  - width_rect - g - diam +5   + coef_down),
+                                             (x0 + width_rect + k + length_side + 5, y1  - width_rect  - g + 5   + coef_down),
+                                             (x0 + width_rect + k + 5, y1  - width_rect  - g   + coef_down)), fill=(178,34,34), outline=(0, 0, 0), width=1) #это основной прямоугольник
+
+                        i = draw.polygon(xy=[ (x0 + width_rect + k+5, y1  - width_rect - g - diam +  coef_down),
+                                              (x0 + width_rect + k +5+ 2* width_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
+                                              (x0 + width_rect + k +5+ 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
+                                              (x0 + width_rect + k +5+ length_side, y1  - width_rect - g - diam +5 + coef_down)], fill = (200,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+
+                        i = draw.polygon(xy=[ (x0 + width_rect + k + length_side+5, y1  - width_rect  - g + 5 + coef_down),
+                                              (x0 + width_rect + k + length_side+5, y1  - width_rect - g - diam +5 + coef_down),
+                                              (x0 + width_rect + k + 2* width_side + length_side+5, y1  - width_rect - g - diam - diam/2 + 7.5 + coef_down),
+                                              (x0 + width_rect + k + length_side + 2* width_side+5, y1  - width_rect  - g - diam/2 + 5 + coef_down)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
+
+                        if (num_fin > number_samples_pic or Volume_all_fin>volume):
+                            break
+                        m += 1
+                        Volume_all = m * volume_samp(length, width, height, type_pic)
+                    if (num_fin > number_samples_pic or Volume_all_fin>volume):
                         break
-                    coef_down = 2* k/(diam + length_side) #это коэффициент опускания монолитов
-                    i = draw.polygon(xy=((x0 + width_rect + k + 5, y1  - width_rect - g - diam    + coef_down) ,
-                                         (x0 + width_rect + k + length_side + 5, y1  - width_rect - g - diam +5   + coef_down),
-                                         (x0 + width_rect + k + length_side + 5, y1  - width_rect  - g + 5   + coef_down),
-                                         (x0 + width_rect + k + 5, y1  - width_rect  - g   + coef_down)), fill=(178,34,34), outline=(0, 0, 0), width=1) #это основной прямоугольник
-
-
-                    i = draw.polygon(xy=[ (x0 + width_rect + k+5, y1  - width_rect - g - diam +  coef_down),
-                                          (x0 + width_rect + k +5+ 2* width_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
-                                          (x0 + width_rect + k +5+ 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
-                                          (x0 + width_rect + k +5+ length_side, y1  - width_rect - g - diam +5 + coef_down)], fill = (200,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
-
-                    i = draw.polygon(xy=[ (x0 + width_rect + k + length_side+5, y1  - width_rect  - g + 5 + coef_down),
-                                          (x0 + width_rect + k + length_side+5, y1  - width_rect - g - diam +5 + coef_down),
-                                          (x0 + width_rect + k + 2* width_side + length_side+5, y1  - width_rect - g - diam - diam/2 + 7.5 + coef_down),
-                                          (x0 + width_rect + k + length_side + 2* width_side+5, y1  - width_rect  - g - diam/2 + 5 + coef_down)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
-
-                    if m > number_samples_pic:
-                        break
-                    m += 1
-                if m > number_samples_pic:
+                    y0 = y0 + diam
+                    num_fin = m * width_num
+                    Volume_all = num_fin * volume_samp(length, width, height, type_pic)
+                    print('Vol', Volume_all)
+                if (num_fin > number_samples_pic or Volume_all_fin>volume):
                     break
-                y0 = y0 + diam
-            if m > number_samples_pic:
-                break
-    print('Количество образцов в аппарате', m, 'Общее число', number_samples_pic)
-    path = os.path.join(r'\Images', 'Version1.jpg')
-    im.save('Images\Version1.jpg')
-    #im.show()
+
+    #TODO доделать вычисление числа образцов
+
+    print('Количество образцов в аппарате', num_fin , 'Общее число', number_samples_pic)
+    # path = os.path.join(r'\Images', 'Version1.jpg')
+    # im.save('Images\Version1.jpg')
+    level = Volume_all/volume * 100
+    level_occupancy(level)
     return im
+
+def volume_samp(a, b, c, type): #a - длина b- ширина c - высота
+    if type == 'sphere':
+        Volume =  4 / 3 * np.pi * (c/2) ** 3
+    elif type == 'cyl':
+        Volume = a * np.pi * (c/2) ** 2
+    elif type == 'one_dim':
+        Volume = a * b* c
+    return Volume
+
+def level_occupancy(level):
+    static_occupancy.value =f'{level},%'
+    if level> 70:
+        static_occupancy.value = 'Аппарат переполнен, уменьшите количество образцов'
 
 def onClose(event): # убивает процесс
     static_text.value = 'До новых встреч'
@@ -298,9 +328,7 @@ def run(event):
                 zaxis_title='Концентрация спирта, кг/метр3', xaxis = dict(gridcolor='LightPink'), yaxis = dict(gridcolor='LightPink'), zaxis = dict(gridcolor='LightPink')),
                           width=500, height=500, margin=dict(l=10, r=20, b=35, t=30))
 
-
-    #plot_time_and_P_T = go.Figure(data = [go.Surface(x = P, y = T, z = hhh)])
-
+    #plot_time_and_P_T = go.Figure(data = [go.Surface(x = P, y = T, z = hhh)]
 
     get_condition()
     work_process()
