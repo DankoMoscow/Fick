@@ -133,28 +133,22 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     m = 0
     num_fin = 0
     Volume_all = 0
-
+    Volume_all_fin=0
     if type_pic == 'sphere':
-        while number_samples_pic >= num_fin:
-            for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
-                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
-                    i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect -  g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=45, end=135, fill='black', width=1)
-                    i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
-                    i = draw.pieslice(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=3) #это эффект блика
-                    Volume_all_fin = Volume_all * 0.7  # условие заполняемости аппарата
-                    if (num_fin > number_samples_pic or Volume_all_fin > volume):
-                        break
-                    m += 1
-                    Volume_all = m * volume_samp(length, width, height, type_pic)
-                if (num_fin > number_samples_pic or Volume_all_fin > volume):
-                    break
-                Volume_all_fin = Volume_all * 0.7  # условие заполняемости аппарата
-                y0 = y0 + diam
+        for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
+            for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
+                if (((num_fin or m) > number_samples_pic)  or (volume < Volume_all_fin)):
+                    continue
+                i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect -  g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=45, end=135, fill='black', width=1)
+                i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
+                i = draw.pieslice(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=3) #это эффект блика
+                m += 1
                 num_fin = m * width_num
                 Volume_all = num_fin * volume_samp(length, width, height, type_pic)
-                print('Vol', Volume_all_fin)
-            if (num_fin > number_samples_pic or Volume_all_fin > volume):
-                break
+                Volume_all_fin = Volume_all * 0.7  # условие заполняемости аппарата
+            y0 = y0 + diam
+            print('Vol', Volume_all)
+
 
     if type_pic == 'cyl':
         while number_samples_pic >= num_fin:
@@ -184,7 +178,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
 
 
     if type_pic == 'one_dim':
-        #for i in range(len(tests)):
+
         while number_samples_pic >= num_fin:
             for g in range(0, y1 - y0 - diam - 2 * width_rect -15, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
@@ -212,12 +206,13 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                         continue #?
                     m += 1
                     Volume_all = m * volume_samp(length, width, height, type_pic)
-
+                    Volume_all_fin = Volume_all *0.7
                 if (num_fin > number_samples_pic or Volume_all_fin>volume):
                     continue #?
                 y0 = y0 + diam
                 num_fin = m * width_num
                 Volume_all = num_fin * volume_samp(length, width, height, type_pic)
+                Volume_all_fin = Volume_all * 0.7
                 print('Vol', Volume_all)
             if (num_fin > number_samples_pic or Volume_all_fin>volume):
                 continue
