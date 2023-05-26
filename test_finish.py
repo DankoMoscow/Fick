@@ -149,42 +149,33 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
             y0 = y0 + diam
             print('Vol', Volume_all)
 
-
     if type_pic == 'cyl':
-        while number_samples_pic >= num_fin:
-            for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect, diam):
-                for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
-                    if (x1 - x0 - k) < (diam + length_side):
-                        break
-                    diam_rounded_rect = (y1  - width_rect  - g) - (y1  - width_rect - g - diam)
+        for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect, diam):
+            for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
+                if (x1 - x0 - k) < (diam + length_side):
+                    continue
+                if (((num_fin or m) > number_samples_pic)  or (volume < Volume_all_fin)):
+                    continue
+                diam_rounded_rect = (y1  - width_rect  - g) - (y1  - width_rect - g - diam)
 
-                    i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
-                    i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
-                    i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
-                    i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
-
-                    if (num_fin > number_samples_pic or Volume_all_fin > volume):
-                        break
-                    m += 1
-                    Volume_all = m * volume_samp(length, width, height, type_pic)
-                if (num_fin > number_samples_pic or Volume_all_fin > volume):
-                    break
-                y0 = y0 + diam
+                i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
+                i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
+                i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
+                i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
+                m += 1
                 num_fin = m * width_num
                 Volume_all = num_fin * volume_samp(length, width, height, type_pic)
-                print('Vol', Volume_all_fin)
-            if (num_fin > number_samples_pic or Volume_all_fin > volume):
-                break
-
+                Volume_all_fin = Volume_all * 0.7  # условие заполняемости аппарата
+            y0 = y0 + diam
+            print('Vol', Volume_all_fin)
 
     if type_pic == 'one_dim':
-
-        while number_samples_pic >= num_fin:
             for g in range(0, y1 - y0 - diam - 2 * width_rect -15, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
                     if (x1 - x0 - k - 2 * width_rect) < (2* width_side + length_side + 5):
-                        break
-
+                        continue
+                    if (((num_fin or m) > number_samples_pic) or (volume < Volume_all_fin)):
+                        continue
                     coef_down = 2* k/(diam + length_side) #это коэффициент опускания монолитов
 
                     i = draw.polygon(xy=((x0 + width_rect + k + 5, y1  - width_rect - g - diam    + coef_down) ,
@@ -202,20 +193,12 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                                           (x0 + width_rect + k + 2* width_side + length_side+5, y1  - width_rect - g - diam - diam/2 + 7.5 + coef_down),
                                           (x0 + width_rect + k + length_side + 2* width_side+5, y1  - width_rect  - g - diam/2 + 5 + coef_down)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
 
-                    if (num_fin > number_samples_pic or Volume_all_fin>volume):
-                        continue #?
                     m += 1
-                    Volume_all = m * volume_samp(length, width, height, type_pic)
+                    num_fin = m * width_num
+                    Volume_all = num_fin * volume_samp(length, width, height, type_pic)
                     Volume_all_fin = Volume_all *0.7
-                if (num_fin > number_samples_pic or Volume_all_fin>volume):
-                    continue #?
                 y0 = y0 + diam
-                num_fin = m * width_num
-                Volume_all = num_fin * volume_samp(length, width, height, type_pic)
-                Volume_all_fin = Volume_all * 0.7
                 print('Vol', Volume_all)
-            if (num_fin > number_samples_pic or Volume_all_fin>volume):
-                continue
 
     print('Количество образцов в аппарате', num_fin , 'Общее число', number_samples_pic)
     # path = os.path.join(r'\Images', 'Version1.jpg')
