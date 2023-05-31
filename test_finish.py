@@ -102,12 +102,11 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
 
     side = pow(volume,1/3)
 
-    equal_hei = side/height
+    equal_hei = height/side #какую часть занимает высота
     equal_len = side/length
     equal_wid = side/width
 
-    diam = int((x1 -x0)/equal_hei)
-    height_next = int((y1-y0)/equal_hei)
+    diam = int((y1 -y0)*equal_hei)
     length_side = int((x1 -x0)/equal_len)
     width_side= int((x1 -x0)/equal_wid)
 
@@ -125,17 +124,21 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     draw.arc(xy = (x1-10, y1 - 7, x1 + 10, y1 + 7), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой нижней стороны
 
     draw.line(xy = (x1 + 8, y1 +5, x1 + 8 , y0 + 5 ), fill = 'black', width=5)  #линия боковой грани
-    #tests = ['test1']
 
-    width_num = math.floor(side / width)
-    print('Количество вглубь', width_num)
+    if type_pic == 'one_dim':
+        width_num = math.floor(side / width)
+    elif type_pic == 'cyl' or type_pic == 'sphere':
+        width_num = math.floor(side / height)
+
+    print('Количество вглубь с учётом среза в половине', width_num)
 
     m = 0
     num_fin = 0
     Volume_all = 0
     Volume_all_fin=0
+
     if type_pic == 'sphere':
-        for g in range(0, y1 - y0 - diam - 2 * width_rect, diam):
+        for g in range(0, y1 - y0 - diam - 2 * width_rect - 10, diam):
             for k in range(0, x1 - x0 - diam - 2 * width_rect, diam):
                 if (((num_fin or m) > number_samples_pic)  or (volume < Volume_all_fin)):
                     continue
@@ -150,7 +153,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
             print('Vol', Volume_all)
 
     if type_pic == 'cyl':
-        for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect, diam):
+        for g in range(0, y1 - y0 - int(1.5*diam) - 2 * width_rect - 10, diam):
             for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
                 if (x1 - x0 - k) < (diam + length_side):
                     continue
@@ -170,7 +173,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
             print('Vol', Volume_all_fin)
 
     if type_pic == 'one_dim':
-            for g in range(0, y1 - y0 - diam - 2 * width_rect -15, diam):
+            for g in range(0, y1 - y0 - diam - 2 * width_rect -20, diam):
                 for k in range(0, x1 - x0 - diam - 2 * width_rect, diam + length_side):
                     if (x1 - x0 - k - 2 * width_rect) < (2* width_side + length_side + 5):
                         continue
