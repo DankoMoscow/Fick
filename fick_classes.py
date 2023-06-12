@@ -12,8 +12,8 @@ from tqdm import tqdm
 
 load_perc = 0.7 # доля загрузки аппарата СКС
 
-target_material_porosity = 120 #кг/м3
-porosity = 0.95
+#target_material_porosity = 120 #кг/м3
+target_material_porosity = 0.95 # пористость материала
 tau_izv = 11 #5.5 #извилистость пор
 
 Vcr_ips = 220 #см3/моль - критический молярный объём ips
@@ -66,7 +66,6 @@ l = np.empty(num_steps + 2, dtype=np.int16)
 
 proc_time = 45*3600
 c_bound = 0.
-
 
 
 class scd_apparatus():
@@ -178,7 +177,7 @@ class scd_apparatus():
 
         elif self.key == 'cyl':
             if self.key_sch == 'explicit':
-                if dt> dr/(2 *self.diff_coef*porosity/tau_izv):
+                if dt> dr/(2 *self.diff_coef*target_material_porosity/tau_izv):
                     sverka_method = 5
                     pass
                 else:
@@ -211,7 +210,7 @@ class scd_apparatus():
 
         elif self.key == 'sphere':
             if self.key_sch == 'explicit':
-                if dt> dr/(2 *self.diff_coef*porosity/tau_izv):  # diff_coef*(dt/dr + 2 * stab_cond) > 1:
+                if dt> dr/(2 *self.diff_coef*target_material_porosity/tau_izv):  # diff_coef*(dt/dr + 2 * stab_cond) > 1:
                     sverka_method = 5
                     pass
                 else:
@@ -240,14 +239,14 @@ class scd_apparatus():
                 c_temp[0] = c_temp[1]
                 return c_temp
 
-    def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r):
+    def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r, c_app, step):
         global sverka_method
         sverka_method = 0
-        print('Граничное условие', y_bound)
         h_arr = []
         h_arr.append(0)
         for i in range(1, num_steps + 2):
             h_arr.append(R / num_steps + h_arr[i - 1])
+        #c_app  концентрация в аппарате - граничное условие
 
         v = 1 #костыль для цилиндра
 
@@ -261,8 +260,6 @@ class scd_apparatus():
         c_changed_fin = np.copy(c_changed)
         y_fick_fin = []
         y_fick_fin = np.copy(y_fick)
-        print('y_fick_fin', y_fick_fin)
-        print('Список концентрации в новой функции', c_changed_fin)
         density_mixture = []
         M_ips_in_gel = []  # Мольная доля
         D_coef_mol_in_gel = []
@@ -308,15 +305,18 @@ class scd_apparatus():
             V_ips.append(V_ips_num)
             density_mixture.append(density_mixture_num)
 
-        #density_mixture[-1] = density_co2
         density_mixture[0] = density_mixture[1]
 
-        #V_ips[-1] = 0
         V_ips[0] = V_ips[1]
 
         for i in range(0, num_steps + 2):
             c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
-
+        print('Шаг', step)
+        if step == 1:
+            c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
+        else:
+            c_changed_fin[-1] = c_app
+        #TODO проверить это
         return y_fick_fin, c_changed_fin, density_mixture, V_ips
     def fick_mass(self, c, length, width, number_samples):
         m = 0.
@@ -370,15 +370,13 @@ class scd_apparatus():
 
             if self.key_sch == ('implicit' or 'explicit'):
                 c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
-
             elif self.key_sch == 'implicit modified':
-                y_fick_changed[i], c_matrix_changed[i], density_mix[i], V_ips[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r)
-            print('Список мольных долей', V_ips[i])
+                y_fick_changed[i], c_matrix_changed[i], density_mix[i], V_ips[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
+
             print('Концентрация', c_matrix_changed[i])
             if volume * load_perc < self.V_gels:
                 method_value = 5
                 pass
-
             else:
                 if method_value != 5:
                     if self.key_sch == ('implicit' or 'explicit'):
@@ -387,12 +385,13 @@ class scd_apparatus():
                     elif self.key_sch == 'implicit modified':
                         mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width, self.number_samples)
 
-                    delta_mass = -1* (mass_list[i] - mass_list[i - 1])
+                    delta_mass = - 1* (mass_list[i] - mass_list[i - 1])
                     c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
 
                     y_boundary = c_app[i] / density_mix[i][-1]
                     y_fick_changed[i][-1] = y_boundary
-                    print('Концентрация в аппарате',c_app[i] ,'Граница', y_boundary,  'плотность', density_mix[i][-1])
+                    print('Концентрация в аппарате',c_app[i],  'плотность', density_mix[i][-1])
+
             window['-PROG-'].update(current_count=i + 1)
             window['-OUT-'].update(str(i + 1) + f'из {n_t} итераций')
 
@@ -405,12 +404,12 @@ class scd_apparatus():
 
     def ideal_mixing(self, c, c_inlet, residence_time, dt, volume, delta_mass):
         c_mixing = c + dt / residence_time * (c_inlet - c) + dt * delta_mass / volume
-        print('c_mix', c_mixing, 'delta_mass', delta_mass)
+        print('delta_mass', delta_mass)
         return c_mixing
 
 def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_samples, value, key_sch, working, working_scheme):
     global n_t, R, dr, c_r, r, R, y_start
-    c_init = density_ips * porosity
+    c_init = density_ips * target_material_porosity
     R = height / 2  # meters
     dr = R / num_steps  # шаг по радиусу meters
     n_t = int(proc_time / dt) + 1  # количество шагов с учетом нулевого шага
@@ -424,10 +423,8 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
         if i == num_steps + 1:
             c_init_list[i] = 0
 
-
     object1 = scd_apparatus(T, P, volume, flowrate, width, length, height, diff_coef, value, key_sch, number_samples)
     object1.__str__()
-
 
     y_start = float(optimize.golden(object1.golden_method, maxiter=10000))  # массовая доля, кг/кгсм
     density_co2, D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips, dynamic_viscosity_co2 = object1.density_co2_and_viscos(T, P)
@@ -436,28 +433,22 @@ def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_sa
     y_fick[-1] = y_start
     y_fick_init = y_fick
 
-    V_ips_num = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start)
+    V_ips_num = density_co2 * y_start / (density_ips * (1 - y_start) + density_co2 * y_start) # объемная доля, м3/м3
     V_ips = (num_steps+2) * [V_ips_num]
     V_ips[-1] = V_ips_num
     density_mixture = np.zeros(num_steps+2)
 
     for i in range(num_steps+2):
-        density_mixture[i] = density_ips * V_ips[i] + density_co2 * (1 - V_ips[i])
+        density_mixture[i] = density_ips * V_ips[i] + density_co2 * (1 - V_ips[i]) # плотность смеси, кг/м3
         if i == num_steps + 1:
             density_mixture[i] = density_ips * V_ips[i] + density_co2 * (1 - V_ips[i])
 
 
     c_changed_init = np.zeros(num_steps + 2)
-    # for i in range(num_steps + 2):
-    #     c_changed_init[i] = density_ips * y_start
-    #     if i == num_steps + 1:
-    #         #c_changed_init[i] = 0
-    #         c_changed_init[i] = density_ips * y_start
     for i in range(num_steps + 2):
-        c_changed_init[i] = density_ips * V_ips[i]
+        c_changed_init[i] = density_ips * y_start
         if i == num_steps + 1:
-
-            c_changed_init[i] = density_ips * V_ips[i]
+            c_changed_init[i] = density_ips * y_start
 
     print('n_t:', n_t, 'proc_time:', proc_time, 'variable of item',value)
     time = np.linspace(0, proc_time, n_t)
