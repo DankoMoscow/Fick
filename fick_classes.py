@@ -239,7 +239,10 @@ class scd_apparatus():
                 c_temp[0] = c_temp[1]
                 return c_temp
 
-    def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r, c_app, step):
+    #def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r, c_app, step):
+    def fick_changed_fin(self, T, P, y_fick, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r,
+                             c_app, step):
+
         global sverka_method
         sverka_method = 0
         h_arr = []
@@ -256,9 +259,9 @@ class scd_apparatus():
         alfa_new = [1] * (num_steps + 2)
         beta_new = [0] * (num_steps + 2)
 
-        c_changed_fin = []
-        c_changed_fin = np.copy(c_changed)
-        y_fick_fin = []
+        # c_changed_fin = []
+        # c_changed_fin = np.copy(c_changed)
+        # y_fick_fin = []
         y_fick_fin = np.copy(y_fick)
         density_mixture = []
         M_ips_in_gel = []  # Мольная доля
@@ -296,28 +299,29 @@ class scd_apparatus():
         y_fick_fin[0] = y_fick_fin[1]
         print('y_fick', y_fick_fin)
 
-        density_mixture_num = None
-        for i in range(0, num_steps + 2):
-            V_ips_num = density_co2 * y_fick_fin[i] / (density_ips * (1 - y_fick_fin[i]) + density_co2 * y_fick_fin[i])
-
-            density_mixture_num = density_ips * V_ips_num + density_co2 * (1 - V_ips_num)
-
-            V_ips.append(V_ips_num)
-            density_mixture.append(density_mixture_num)
-
-        density_mixture[0] = density_mixture[1]
-
-        V_ips[0] = V_ips[1]
-
-        for i in range(0, num_steps + 2):
-            c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
-        print('Шаг', step)
-        if step == 1:
-            c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
-        else:
-            c_changed_fin[-1] = c_app
-        #TODO проверить это
-        return y_fick_fin, c_changed_fin, density_mixture, V_ips
+        # density_mixture_num = None
+        # for i in range(0, num_steps + 2):
+        #     V_ips_num = density_co2 * y_fick_fin[i] / (density_ips * (1 - y_fick_fin[i]) + density_co2 * y_fick_fin[i])
+        #
+        #     density_mixture_num = density_ips * V_ips_num + density_co2 * (1 - V_ips_num)
+        #
+        #     V_ips.append(V_ips_num)
+        #     density_mixture.append(density_mixture_num)
+        #
+        # density_mixture[0] = density_mixture[1]
+        #
+        # V_ips[0] = V_ips[1]
+        #
+        # for i in range(0, num_steps + 2):
+        #     c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
+        # print('Шаг', step)
+        # if step == 1:
+        #     c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
+        # else:
+        #     c_changed_fin[-1] = c_app
+        # #TODO проверить это
+        #return y_fick_fin, c_changed_fin, density_mixture, V_ips
+        return y_fick_fin
     def fick_mass(self, c, length, width, number_samples):
         m = 0.
         for i in range(1, len(c)):
@@ -349,13 +353,14 @@ class scd_apparatus():
         y_fick_changed[0] = y_fick_init
         density_mix[0] = density_ips
 
-        V_ips[0] = V_init_list#TODO доделать returnom из main. Сделать пересчёт на массу, а не концентрауию
+        V_ips[0] = V_init_list  #TODO доделать returnom из main. Сделать пересчёт на массу, а не концентрауию
         if self.key_sch == ('implicit' or 'explicit'):
             mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width, self.number_samples)
         elif self.key_sch == 'implicit modified':
             mass_list[0] = self.fick_mass(c_matrix_changed[0], self.length, self.width, self.number_samples)
         c_app[0] = 0.
 
+        y_fick_changed[0] = 0.75118115
         layout = [[psg.ProgressBar(n_t, orientation='h', expand_x=True, size=(20, 20), key='-PROG-')], [psg.Text('', key='-OUT-', enable_events=True, font=('Arial Bold', 16), justification='center', expand_x=True)]]
         window = psg.Window('Progress Bar', layout, size=(715, 150))
 
@@ -371,7 +376,8 @@ class scd_apparatus():
             if self.key_sch == ('implicit' or 'explicit'):
                 c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
             elif self.key_sch == 'implicit modified':
-                y_fick_changed[i], c_matrix_changed[i], density_mix[i], V_ips[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
+                #y_fick_changed[i], c_matrix_changed[i], density_mix[i], V_ips[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
+                y_fick_changed[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
 
             print('Концентрация', c_matrix_changed[i])
             if volume * load_perc < self.V_gels:
@@ -383,12 +389,15 @@ class scd_apparatus():
                         mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width, self.number_samples)
 
                     elif self.key_sch == 'implicit modified':
-                        mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width, self.number_samples)
+                        #mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width, self.number_samples)
+                        mass_list[i] = self.fick_mass(y_fick_changed[i], self.length, self.width, self.number_samples)
 
                     delta_mass = - 1* (mass_list[i] - mass_list[i - 1])
-                    c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
+                    #c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
+                    c_app[i] = self.ideal_mixing(y_fick_changed[i - 1], 0, residence_time, dt, volume, delta_mass)
 
-                    y_boundary = c_app[i] / density_mix[i][-1]
+                    #y_boundary = c_app[i] / density_mix[i][-1]
+                    y_boundary = c_app[i]
                     y_fick_changed[i][-1] = y_boundary
                     print('Концентрация в аппарате',c_app[i],  'плотность', density_mix[i][-1])
 
