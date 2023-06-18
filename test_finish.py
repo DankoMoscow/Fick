@@ -24,7 +24,7 @@ pio.templates
 pid = os.getpid()
 hv.extension('plotly')
 
-
+#виджеты для отображения варьируемых параметров
 radio_group = pn.widgets.Select(
     value='Основные параметры',
     options=['Основные параметры', 'Дополнительные параметры'])
@@ -50,7 +50,6 @@ float_diff_coef = pn.widgets.FloatSlider(name='Коэффициент диффу
 
 int_number_samples = pn.widgets.IntSlider(name='Количество образцов', start=100, end=1000, step=100, value=200,
                                           format=PrintfTickFormatter(format='%.1f штук'))
-
 
 group_of_key = pn.widgets.RadioButtonGroup(
     name='Выбор необходимого вида образца', options=['one_dim', 'cyl', 'sphere'], button_type='success',
@@ -83,8 +82,8 @@ temperature_select = pn.widgets.FloatSlider(name='Температура сис�
 
 dop_column = pn.Column(pressure_select, temperature_select)
 
-#виджеты для отображения
 
+#виджеты для отображения
 main_column = pn.WidgetBox('# Расчёт процесса сверхкритической сушки', radio_group, groups_main, dop_column, static_occupancy,
                           static_text, static_cond, static_time,
                           static_time_process, static_time_process_result,  button,button_picture, button_exit)
@@ -93,6 +92,7 @@ plot = hv.Curve([0]).opts(width=300)
 picture = None
 main_window = pn.Row(pn.Spacer(width=100), main_column, pn.Spacer(width=50), plot,pn.Spacer(width=50), picture, sizing_mode='stretch_width') # общий виджет
 
+#функция для визуализации аппарата сверхкритической сушки
 def visual(volume, height, length, width, type_pic, number_samples_pic):
     im = Image.new('RGB', (500, 500), (255, 255, 255))
 
@@ -118,11 +118,10 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
 
     draw.polygon(xy = ((x0, y0), (x1, y0 + 10), (x1, y1 +10), (x0, y1)), fill='white', outline=(0, 0, 0), width=width_arc)
 
-    draw.arc(xy=(x0_arc , y0_arc, x1_arc +12, y1_arc), start=180, end=360, fill='black', width=width_arc) #дуга верха
+    draw.arc(xy=(x0_arc , y0_arc, x1_arc +12, y1_arc), start=180, end=360, fill='black', width=width_arc)
 
-    draw.arc(xy = (x1-10, y0 -2 , x1 + 10, y0 + 12), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой верхней стороны
-    draw.arc(xy = (x1-10, y1 - 7, x1 + 10, y1 + 7), start=0 , end = 90, fill = 'black', width=width_arc) #дуга боковой нижней стороны
-
+    draw.arc(xy = (x1-10, y0 -2 , x1 + 10, y0 + 12), start=0 , end = 90, fill = 'black', width=width_arc)
+    draw.arc(xy = (x1-10, y1 - 7, x1 + 10, y1 + 7), start=0 , end = 90, fill = 'black', width=width_arc)
     draw.line(xy = (x1 + 8, y1 +5, x1 + 8 , y0 + 5 ), fill = 'black', width=5)  #линия боковой грани
 
     if type_pic == 'one_dim':
@@ -144,11 +143,11 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                     continue
                 i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect -  g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=45, end=135, fill='black', width=1)
                 i = draw.ellipse(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), fill=(178,34,34), outline=None, width=3)
-                i = draw.pieslice(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=3) #это эффект блика
+                i = draw.pieslice(xy=(x0 + width_rect + k, y1  - width_rect - g - diam, x0 + width_rect + diam + k, y1  - width_rect  - g), start=250, end=50, fill=(220,34,34), outline=None, width=3)
                 m += 1
                 num_fin = m * width_num
                 Volume_all = num_fin * volume_samp(length, width, height, type_pic)
-                Volume_all_fin = Volume_all * 0.7  # условие заполняемости аппарата
+                Volume_all_fin = Volume_all * 0.7
             y0 = y0 + diam
             print('Vol', Volume_all)
 
@@ -163,7 +162,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
 
                 i = draw.line(xy=(x0 + width_rect + k + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + diam/2 + length_side, y1  - width_rect - g - diam), fill = 'black', width = 1)
                 i = draw.line(xy=(x0 + width_rect + k + diam / 4, y1  - width_rect  - g, x0 + width_rect + k + diam / 2 + length_side, y1  - width_rect  - g), fill='black', width = 1)
-                i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1) #левая граница цилиндра
+                i = draw.arc(xy=(x0 + width_rect + k, y1  - width_rect - g - diam , x0 + width_rect + diam/2 + k , y1  - width_rect  - g), start=90, end=270, fill='black', width=1)
                 i = draw.ellipse(xy=(x0 + width_rect + k + length_side + diam/4, y1  - width_rect - g - diam, x0 + width_rect + k + length_side + 3* diam/4 , y1  - width_rect  - g), fill=(178,34,34), outline='black', width=1)
                 m += 1
                 num_fin = m * width_num
@@ -184,17 +183,17 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
                     i = draw.polygon(xy=((x0 + width_rect + k + 5, y1  - width_rect - g - diam    + coef_down) ,
                                          (x0 + width_rect + k + length_side + 5, y1  - width_rect - g - diam +5   + coef_down),
                                          (x0 + width_rect + k + length_side + 5, y1  - width_rect  - g + 5   + coef_down),
-                                         (x0 + width_rect + k + 5, y1  - width_rect  - g   + coef_down)), fill=(178,34,34), outline=(0, 0, 0), width=1) #это основной прямоугольник
+                                         (x0 + width_rect + k + 5, y1  - width_rect  - g   + coef_down)), fill=(178,34,34), outline=(0, 0, 0), width=1)
 
                     i = draw.polygon(xy=[ (x0 + width_rect + k+5, y1  - width_rect - g - diam +  coef_down),
                                           (x0 + width_rect + k +5+ 2* width_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
                                           (x0 + width_rect + k +5+ 2* width_side + length_side, y1  - width_rect - g - diam - diam/2 + 5 + coef_down),
-                                          (x0 + width_rect + k +5+ length_side, y1  - width_rect - g - diam +5 + coef_down)], fill = (200,34,34), outline=(0, 0, 0), width = 1) #верхняя грань
+                                          (x0 + width_rect + k +5+ length_side, y1  - width_rect - g - diam +5 + coef_down)], fill = (200,34,34), outline=(0, 0, 0), width = 1)
 
                     i = draw.polygon(xy=[ (x0 + width_rect + k + length_side+5, y1  - width_rect  - g + 5 + coef_down),
                                           (x0 + width_rect + k + length_side+5, y1  - width_rect - g - diam +5 + coef_down),
                                           (x0 + width_rect + k + 2* width_side + length_side+5, y1  - width_rect - g - diam - diam/2 + 7.5 + coef_down),
-                                          (x0 + width_rect + k + length_side + 2* width_side+5, y1  - width_rect  - g - diam/2 + 5 + coef_down)], fill = (178,34,34),outline=(0, 0, 0),  width = 1) #верхняя грань
+                                          (x0 + width_rect + k + length_side + 2* width_side+5, y1  - width_rect  - g - diam/2 + 5 + coef_down)], fill = (178,34,34),outline=(0, 0, 0),  width = 1)
 
                     m += 1
                     num_fin = m * width_num
@@ -210,6 +209,7 @@ def visual(volume, height, length, width, type_pic, number_samples_pic):
     level_occupancy(level)
     return im
 
+#ФУНКЦИИ ВСПОМОГАТЕЛЬНЫЕ ДЛЯ ЛУЧШЕГО ПОНИМАНИЯ РЕЗУЛЬТАТОВ ПРОЦЕССА
 def volume_samp(a, b, c, type): #a - длина b- ширина c - высота
     if type == 'sphere':
         Volume =  4 / 3 * np.pi * (c/2) ** 3
@@ -273,7 +273,7 @@ def visual_pic(event):
     main_window[4] = pn.Spacer(width=10)
     main_window[5] = im
 
-
+#ОСНОВНАЯ ФУНКЦИЯ,ОТВЕЧАЮЩАЯ ЗА ВЕБ-РАБОТУ ПРИЛОЖЕНИЯ
 def run(event):
     start_time = datetime.now()
     global main_window, float_width, float_dt, float_length, float_diff_coef, int_number_samples, podskazka, delta_time, cond_scheme, temperature_select, pressure_select
@@ -309,7 +309,6 @@ def run(event):
                 zaxis_title='Концентрация спирта, кг/метр3', xaxis = dict(gridcolor='LightPink'), yaxis = dict(gridcolor='LightPink'), zaxis = dict(gridcolor='LightPink')),
                           width=500, height=500, margin=dict(l=10, r=20, b=35, t=30))
 
-    #plot_time_and_P_T = go.Figure(data = [go.Surface(x = P, y = T, z = hhh)]
 
     get_condition()
     work_process()
@@ -321,10 +320,9 @@ def run(event):
     main_window[2] = pn.Spacer (width = 10)
     main_window[3] = main_plots
 
-
     variable_time = static_time_process.value
     hhh =  save_time(variable_time)
-    print('hhh', hhh)
+    #print('hhh', hhh)
     end_time = datetime.now()
     delta_time = end_time - start_time
     get_time()

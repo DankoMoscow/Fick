@@ -10,9 +10,9 @@ import time
 import PySimpleGUI as psg #библиотека для создания шкалы процесса
 from tqdm import tqdm
 
-load_perc = 0.7 # доля загрузки аппарата СКС
 
-#target_material_porosity = 120 #кг/м3
+#начальные параметры
+load_perc = 0.7 # доля загрузки аппарата СКС
 target_material_porosity = 0.95 # пористость материала
 tau_izv = 11 #5.5 #извилистость пор
 
@@ -67,7 +67,7 @@ l = np.empty(num_steps + 2, dtype=np.int16)
 proc_time = 45*3600
 c_bound = 0.
 
-
+#класс, отвечающий за вычисление концентрации
 class scd_apparatus():
     def __init__(self, T, P, volume, flowrate, width, length, height, diff_coef, key, key_sch, number_samples):
         self.width = width
@@ -126,9 +126,7 @@ class scd_apparatus():
             math.log1p(T)) ** 3)/ (1 + B7 * P + B8 * math.log1p(T) + B9 * (math.log1p(T)) ** 2)) / 1000  # Результат в Па*с
         return density_co2_coef , D_coef_ips_co2, D_coef_co2_ips, dynamic_viscosity_ips,  dynamic_viscosity_co2
 
-    """
-    эта функция отвечает за создание коэффициента диффузии в зависимости от массовой доли
-    """
+    #метод золотого сечения
     def golden_method(self, x):
         numerator = abs(
             (self.V_apparat_free + self.V_gels * target_material_porosity) *
@@ -136,6 +134,7 @@ class scd_apparatus():
             - (self.m_ips_gramms / 1000))
         return numerator / (self.m_ips_gramms / 1000)
 
+    #функция расчёта концентрации ИПС по уравнению диффузии Фика без учёта влияния температуры и давления
     def fick_conc(self,T, P, c, c_bound, dr, dt, r):
         global sverka_method
         sverka_method = 0
@@ -148,7 +147,9 @@ class scd_apparatus():
         c_temp = np.copy(c)
 
         if self.key == 'one_dim':
+            #явная разностная схема
             if self.key_sch == 'explicit':
+                #условие устойчивости
                 if stab_cond > 1 / (2 * self.diff_coef):
                     print('stab_cond', stab_cond, 'self.diff', 1 / (2*self.diff_coef))
                     sverka_method = 5
@@ -160,6 +161,7 @@ class scd_apparatus():
                     return c_temp
 
             elif self.key_sch == 'implicit':
+                #неявная разностная схема
                 a = -self.diff_coef * dt / (dr) ** 2  # коэффициент 'a'
                 b = 1 + 2 * self.diff_coef * dt / (dr) ** 2  # коэффицент b
                 c_koef = -self.diff_coef * dt / (dr) ** 2  # коэффициент c
@@ -176,7 +178,9 @@ class scd_apparatus():
                 return c_temp
 
         elif self.key == 'cyl':
+            #явная разностная схема
             if self.key_sch == 'explicit':
+                #условие устойчивости
                 if dt> dr/(2 *self.diff_coef*target_material_porosity/tau_izv):
                     sverka_method = 5
                     pass
@@ -189,7 +193,8 @@ class scd_apparatus():
                     c_temp[0] = c_temp[1]
                     return c_temp
 
-            elif self.key_sch == 'implicit':  # должна быть абсолютно устойчива это с ЛКР
+            #неявная разностная схема
+            elif self.key_sch == 'implicit':
 
                 for j in range(1, len(r)):
                     a_coef = -self.diff_coef * dt / (dr) ** 2
@@ -209,19 +214,21 @@ class scd_apparatus():
                 return c_temp
 
         elif self.key == 'sphere':
+            #явная разностная схема
             if self.key_sch == 'explicit':
-                if dt> dr/(2 *self.diff_coef*target_material_porosity/tau_izv):  # diff_coef*(dt/dr + 2 * stab_cond) > 1:
+                #услвоие устойчивости
+                if dt> dr/(2 *self.diff_coef*target_material_porosity/tau_izv):
                     sverka_method = 5
                     pass
                 else:
                     for i in range(len(r)):
                         c_temp[1:-1] = c[1:-1] + self.diff_coef * dt * (
                                     (c[2:] - 2 * c[1:-1] + c[0:-2]) / dr ** 2 +  (c[2:] - c[0:-2]) / (
-                                        r[i] * dr))  # явная разностная схема с ЦКР работает
+                                        r[i] * dr))
                     c_temp[-1] = c_bound
                     c_temp[0] = c_temp[1]
                     return c_temp
-
+            #неявная разностная схема
             elif self.key_sch == 'implicit':
                 for j in range(1, len(r)):
                     a = -self.diff_coef * dt / (dr) ** 2 - (1 / r[j]) * self.diff_coef * dt / dr
@@ -239,19 +246,16 @@ class scd_apparatus():
                 c_temp[0] = c_temp[1]
                 return c_temp
 
-    #def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r, c_app, step):
-    def fick_changed_fin(self, T, P, y_fick, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r,
-                             c_app, step):
-
+    #усложнённая функция расчёта концентрации с учётом влияния температуры и давления процесса
+    def fick_changed_fin(self, T, P, y_fick, c_changed, D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r, c_app, step):
         global sverka_method
         sverka_method = 0
         h_arr = []
         h_arr.append(0)
         for i in range(1, num_steps + 2):
             h_arr.append(R / num_steps + h_arr[i - 1])
-        #c_app  концентрация в аппарате - граничное условие
 
-        v = 1 #костыль для цилиндра
+        v = 1
 
         c_coef_new = [None] * (num_steps + 2)
         a_coef_new = [None] * (num_steps + 2)
@@ -259,9 +263,9 @@ class scd_apparatus():
         alfa_new = [1] * (num_steps + 2)
         beta_new = [0] * (num_steps + 2)
 
-        # c_changed_fin = []
-        # c_changed_fin = np.copy(c_changed)
-        # y_fick_fin = []
+        c_changed_fin = []
+        c_changed_fin = np.copy(c_changed)
+        y_fick_fin = []
         y_fick_fin = np.copy(y_fick)
         density_mixture = []
         M_ips_in_gel = []  # Мольная доля
@@ -297,31 +301,31 @@ class scd_apparatus():
 
         y_fick_fin[-1] = y_bound
         y_fick_fin[0] = y_fick_fin[1]
-        print('y_fick', y_fick_fin)
+        #print('y_fick', y_fick_fin)
 
-        # density_mixture_num = None
-        # for i in range(0, num_steps + 2):
-        #     V_ips_num = density_co2 * y_fick_fin[i] / (density_ips * (1 - y_fick_fin[i]) + density_co2 * y_fick_fin[i])
-        #
-        #     density_mixture_num = density_ips * V_ips_num + density_co2 * (1 - V_ips_num)
-        #
-        #     V_ips.append(V_ips_num)
-        #     density_mixture.append(density_mixture_num)
-        #
-        # density_mixture[0] = density_mixture[1]
-        #
-        # V_ips[0] = V_ips[1]
-        #
-        # for i in range(0, num_steps + 2):
-        #     c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
-        # print('Шаг', step)
-        # if step == 1:
-        #     c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
-        # else:
-        #     c_changed_fin[-1] = c_app
-        # #TODO проверить это
-        #return y_fick_fin, c_changed_fin, density_mixture, V_ips
-        return y_fick_fin
+        density_mixture_num = None
+        for i in range(0, num_steps + 2):
+            V_ips_num = density_co2 * y_fick_fin[i] / (density_ips * (1 - y_fick_fin[i]) + density_co2 * y_fick_fin[i])
+
+            density_mixture_num = density_ips * V_ips_num + density_co2 * (1 - V_ips_num)
+
+            V_ips.append(V_ips_num)
+            density_mixture.append(density_mixture_num)
+
+        density_mixture[0] = density_mixture[1]
+
+        V_ips[0] = V_ips[1]
+
+        for i in range(0, num_steps + 2):
+            c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
+        #print('Шаг', step)
+        if step == 1:
+            c_changed_fin[i] = y_fick_fin[i] * density_mixture[i]
+        else:
+            c_changed_fin[-1] = c_app
+        return y_fick_fin, c_changed_fin, density_mixture, V_ips
+
+    #расчёт массы ИПС в гелях
     def fick_mass(self, c, length, width, number_samples):
         m = 0.
         for i in range(1, len(c)):
@@ -333,10 +337,10 @@ class scd_apparatus():
                 m += c[i] * ((2 * i * dr) - ((i - 1) * 2 * dr)) * length * width
         return m * number_samples
 
-
+    #итерирование по времени процесса
     def time_iteration(self, T, P, V_init_list,  c_init_list, c_changed_init, y_fick_init, D_coef_ips_co2, D_coef_co2_ips, volume, flowrate, n_t, dt, dr, number_samples):
         global method_value
-        method_value = 0  # костыль для определения и не вылетания объёма аппарата
+        method_value = 0
         residence_time = volume / flowrate
 
         c_app = np.zeros(n_t)
@@ -353,14 +357,13 @@ class scd_apparatus():
         y_fick_changed[0] = y_fick_init
         density_mix[0] = density_ips
 
-        V_ips[0] = V_init_list  #TODO доделать returnom из main. Сделать пересчёт на массу, а не концентрауию
+        V_ips[0] = V_init_list
         if self.key_sch == ('implicit' or 'explicit'):
             mass_list[0] = self.fick_mass(c_matrix[0], self.length, self.width, self.number_samples)
         elif self.key_sch == 'implicit modified':
             mass_list[0] = self.fick_mass(c_matrix_changed[0], self.length, self.width, self.number_samples)
         c_app[0] = 0.
 
-        y_fick_changed[0] = 0.75118115
         layout = [[psg.ProgressBar(n_t, orientation='h', expand_x=True, size=(20, 20), key='-PROG-')], [psg.Text('', key='-OUT-', enable_events=True, font=('Arial Bold', 16), justification='center', expand_x=True)]]
         window = psg.Window('Progress Bar', layout, size=(715, 150))
 
@@ -376,10 +379,9 @@ class scd_apparatus():
             if self.key_sch == ('implicit' or 'explicit'):
                 c_matrix[i] = self.fick_conc(T, P, c_matrix[i - 1], c_bound, dr, dt, r)
             elif self.key_sch == 'implicit modified':
-                #y_fick_changed[i], c_matrix_changed[i], density_mix[i], V_ips[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
-                y_fick_changed[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
+                y_fick_changed[i], c_matrix_changed[i], density_mix[i], V_ips[i] = self.fick_changed_fin(T, P, y_fick_changed[i-1], c_matrix_changed[i - 1],D_coef_ips_co2, D_coef_co2_ips, c_bound, y_bound, dr, dt, r , c_app[i-1], i)
 
-            print('Концентрация', c_matrix_changed[i])
+            #print('Концентрация', c_matrix_changed[i])
             if volume * load_perc < self.V_gels:
                 method_value = 5
                 pass
@@ -389,17 +391,14 @@ class scd_apparatus():
                         mass_list[i] = self.fick_mass(c_matrix[i], self.length, self.width, self.number_samples)
 
                     elif self.key_sch == 'implicit modified':
-                        #mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width, self.number_samples)
-                        mass_list[i] = self.fick_mass(y_fick_changed[i], self.length, self.width, self.number_samples)
+                        mass_list[i] = self.fick_mass(c_matrix_changed[i], self.length, self.width, self.number_samples)
 
                     delta_mass = - 1* (mass_list[i] - mass_list[i - 1])
-                    #c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
-                    c_app[i] = self.ideal_mixing(y_fick_changed[i - 1], 0, residence_time, dt, volume, delta_mass)
+                    c_app[i] = self.ideal_mixing(c_app[i - 1], 0, residence_time, dt, volume, delta_mass)
 
-                    #y_boundary = c_app[i] / density_mix[i][-1]
-                    y_boundary = c_app[i]
+                    y_boundary = c_app[i] / density_mix[i][-1]
                     y_fick_changed[i][-1] = y_boundary
-                    print('Концентрация в аппарате',c_app[i],  'плотность', density_mix[i][-1])
+                    #print('Концентрация в аппарате',c_app[i],  'плотность', density_mix[i][-1])
 
             window['-PROG-'].update(current_count=i + 1)
             window['-OUT-'].update(str(i + 1) + f'из {n_t} итераций')
@@ -411,11 +410,13 @@ class scd_apparatus():
         elif self.key_sch == 'implicit modified':
             return c_matrix_changed, mass_list, c_app
 
+    #функция расчёта концентрации по уравнению МИС
     def ideal_mixing(self, c, c_inlet, residence_time, dt, volume, delta_mass):
         c_mixing = c + dt / residence_time * (c_inlet - c) + dt * delta_mass / volume
-        print('delta_mass', delta_mass)
+        #print('delta_mass', delta_mass)
         return c_mixing
 
+#основная функции
 def main(T, P, width, length, height, volume, flowrate, dt, diff_coef, number_samples, value, key_sch, working, working_scheme):
     global n_t, R, dr, c_r, r, R, y_start
     c_init = density_ips * target_material_porosity
